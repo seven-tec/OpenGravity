@@ -20,6 +20,9 @@ function createHealthCheckServer(): http.Server {
         timestamp: new Date().toISOString(),
         service: 'opengravity'
       }));
+    } else if (req.url === '/') {
+      res.writeHead(200, { 'Content-Type': 'text/plain' });
+      res.end('OpenGravity Service is running. Check /health for status.');
     } else {
       res.writeHead(404, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ status: 'not_found' }));
@@ -56,8 +59,8 @@ async function main() {
     console.log(`[Health] Server running on port ${PORT}`);
   });
 
-  await bot.start();
   console.log('[OpenGravity] Bot is live! Press Ctrl+C to stop.');
+  await bot.start();
 
   process.on('SIGINT', async () => {
     console.log('\n[OpenGravity] Shutting down...');
