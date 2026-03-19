@@ -59,8 +59,13 @@ async function main() {
     console.log(`[Health] Server running on port ${PORT}`);
   });
 
-  await bot.api.deleteWebhook({ drop_pending_updates: true });
-  console.log('[Bot] Webhook cleared, starting fresh...');
+  try {
+    await bot.api.deleteWebhook({ drop_pending_updates: true });
+    console.log('[Bot] Webhook cleared successfully.');
+  } catch (err) {
+    console.warn('[Bot] Warning: Could not clear webhook (DNS/Network issue). Continuing anyway...');
+  }
+  console.log('[Bot] Webhook check finished.');
   console.log('[OpenGravity] Bot is live! Press Ctrl+C to stop.');
   await bot.start();
 
