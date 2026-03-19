@@ -59,6 +59,8 @@ async function main() {
     console.log(`[Health] Server running on port ${PORT}`);
   });
 
+  await bot.api.deleteWebhook({ drop_pending_updates: true });
+  console.log('[Bot] Webhook cleared, starting fresh...');
   console.log('[OpenGravity] Bot is live! Press Ctrl+C to stop.');
   await bot.start();
 
