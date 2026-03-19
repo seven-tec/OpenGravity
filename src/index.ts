@@ -1,5 +1,6 @@
-import { config as dotenv } from 'dotenv';
+import { config } from 'dotenv';
 import http from 'http';
+import dns from 'node:dns';
 import { parseConfig, type EnvSchema } from './config.js';
 import { DatabaseManager } from './core/database.js';
 import { ToolRegistry } from './tools/registry.js';
@@ -7,7 +8,15 @@ import { Agent } from './core/agent.js';
 import { createBot } from './bot/bot.js';
 import { FirestoreService } from './services/database/firestore.js';
 
-dotenv();
+// Override system DNS if needed
+try {
+  dns.setServers(['8.8.8.8', '1.1.1.1']);
+  console.log('[System] DNS servers set to 8.8.8.8, 1.1.1.1');
+} catch (e) {
+  console.warn('[System] Could not override DNS servers.');
+}
+
+config(); // Changed from dotenv();
 
 const PORT = parseInt(process.env.PORT || '7860', 10);
 
