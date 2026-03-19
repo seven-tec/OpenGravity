@@ -6,4 +6,6 @@ service-account.json
 .DS_Store
 .gemini/
 .atl/
-package-lock.json
+# package-lock.json removed from ignore
+data/
+
