@@ -1,17 +1,24 @@
 import Database from 'better-sqlite3';
-import { mkdir } from 'fs/promises';
+import { mkdirSync } from 'fs';
 import { dirname } from 'path';
-import type { Config } from '../config.js';
 import type { Message, LongTermMemory } from '../types/index.js';
 
 export class DatabaseManager {
   private db: Database.Database;
 
   constructor(dbPath: string) {
-    this.db = new Database(dbPath);
-    this.db.pragma('journal_mode = WAL');
-    this.db.pragma('foreign_keys = ON');
-    this.initTables();
+    try {
+      const dbDir = dirname(dbPath);
+      mkdirSync(dbDir, { recursive: true });
+      
+      this.db = new Database(dbPath);
+      this.db.pragma('journal_mode = WAL');
+      this.db.pragma('foreign_keys = ON');
+      this.initTables();
+    } catch (error) {
+      console.error(`❌ [Database] Failed to initialize database at ${dbPath}:`, (error as Error).message);
+      throw error;
+    }
   }
 
   private initTables(): void {
@@ -42,9 +49,9 @@ export class DatabaseManager {
     `);
   }
 
-  async initialize(config: Config): Promise<void> {
-    const dbDir = dirname(config.database.dbPath);
-    await mkdir(dbDir, { recursive: true });
+  async initialize(): Promise<void> {
+    // Already handled in constructor, but kept for compatibility if needed
+    console.log('📦 [Database] Schema and directory verified');
   }
 
   addMessage(userId: string, role: Message['role'], content: string, toolCalls?: string): number {

@@ -42,6 +42,7 @@ async function main() {
   const firestore = new FirestoreService('service-account.json');
 
   const tools = new ToolRegistry();
+  await db.initialize();
   tools.initialize(config, db);
   console.log(`[Tools] ${tools.names.length} tools registered`);
 

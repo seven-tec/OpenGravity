@@ -14,10 +14,15 @@ FROM node:20-slim
 
 WORKDIR /app
 
-COPY package*.json ./
+# Asegurar que el usuario node (UID 1000) sea el dueño del directorio de trabajo
+RUN chown -R node:node /app
+
+USER node
+
+COPY --chown=node:node package*.json ./
 RUN npm ci --only=production && npm cache clean --force
 
-COPY --from=builder /app/dist ./dist
+COPY --chown=node:node --from=builder /app/dist ./dist
 
 ENV NODE_ENV=production
 ENV PORT=7860
