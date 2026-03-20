@@ -1,6 +1,6 @@
 import type { Tool } from './base.js';
 import { GetCurrentTimeTool, GetRecentMessagesTool, ExecuteShellTool, setDatabase } from './system_tools.js';
-import { RegistrarEntrenamientoTool, setFirestore } from './fitness_tools.js';
+import { ManagePersonalKnowledgeTool, setFirestore } from './knowledge_tools.js';
 import type { Config } from '../config.js';
 import type { DatabaseManager } from '../core/database.js';
 import type { FirestoreService } from '../services/database/firestore.js';
@@ -15,7 +15,7 @@ export class ToolRegistry {
       userId: '',
       shellTimeoutMs: config.shell.timeoutMs,
     }));
-    this.register(new RegistrarEntrenamientoTool());
+    this.register(new ManagePersonalKnowledgeTool());
 
     if (db) {
       setDatabase(db);

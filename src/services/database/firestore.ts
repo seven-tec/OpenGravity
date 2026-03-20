@@ -95,6 +95,24 @@ export class FirestoreService {
     }
   }
 
+  async saveKnowledge(userId: string, category: string, action: string, data: any): Promise<void> {
+    if (!this.isInitialized || !this.db) return;
+
+    try {
+      if (action === "store" || action === "update") {
+        // Estructura: users/{userId}/knowledge/{category}/items/{docId}
+        const collectionRef = this.db.collection('users').doc(userId).collection('knowledge').doc(category).collection('items');
+        await collectionRef.add({
+          ...data,
+          createdAt: admin.firestore.FieldValue.serverTimestamp(),
+          metadata: { source: 'OpenGravity_Agent' }
+        });
+      }
+    } catch (error) {
+      this.handleFirestoreError(error);
+    }
+  }
+
   async getRecentMessages(userId: string, limit: number): Promise<any[]> {
     if (!this.isInitialized || !this.db) return [];
 
