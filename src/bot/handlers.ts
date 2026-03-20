@@ -118,7 +118,7 @@ _Todo operacional._`, { parse_mode: 'Markdown' });
         
         // Process with agent
         const userId = ctx.from!.id.toString();
-        const response = await agent.process(userId, result.text);
+        const response = await agent.process(userId, result.text, true);
         
         // Output Voice response if TTS is enabled
         if (tts.isEnabled() && response.length < 2000) {
