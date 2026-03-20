@@ -23,7 +23,8 @@ export const ConfigSchema = z.object({
     whisperProvider: z.enum(['openai', 'groq']).default('groq'),
     elevenlabsApiKey: z.string().optional(),
     whisperApiKey: z.string().optional(),
-    elevenlabsVoiceId: z.string().default('21m00Tcm4TlvDq8ikWAM'),
+    elevenlabsVoiceId: z.string().default('hpp4J3VqNfWAUOO0d1Us'),
+
   }),
   shell: z.object({
     timeoutMs: z.number().int().positive().default(30000),
@@ -76,7 +77,8 @@ export function parseConfig(env: EnvSchema): Config {
       whisperProvider: (env.WHISPER_PROVIDER as 'openai' | 'groq') ?? 'groq',
       elevenlabsApiKey: env.ELEVENLABS_API_KEY,
       whisperApiKey: env.WHISPER_API_KEY ?? env.GROQ_API_KEY,
-      elevenlabsVoiceId: env.ELEVENLABS_VOICE_ID ?? '21m00Tcm4TlvDq8ikWAM',
+      elevenlabsVoiceId: env.ELEVENLABS_VOICE_ID ?? 'hpp4J3VqNfWAUOO0d1Us',
+
     },
     shell: {
       timeoutMs: parseInt(env.SHELL_TIMEOUT_MS ?? '30000', 10),

@@ -37,7 +37,8 @@ export class TTSInterface {
     }
 
     const voiceId = options?.voiceId ?? this.defaultVoiceId;
-    const model = options?.model ?? 'eleven_multilingual_v2';
+    const model = options?.model ?? 'eleven_multilingual_v1';
+
 
     const response = await fetch(
       `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`,
