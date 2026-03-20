@@ -37,7 +37,9 @@ export class TTSInterface {
     }
 
     const voiceId = options?.voiceId ?? this.defaultVoiceId;
-    const model = options?.model ?? 'eleven_multilingual_v1';
+    const model = options?.model ?? 'eleven_flash_v2_5';
+
+    console.log(`[TTS] Requesting ElevenLabs: Voice=${voiceId}, Model=${model}`);
 
 
     const response = await fetch(
@@ -62,7 +64,8 @@ export class TTSInterface {
 
     if (!response.ok) {
       const errorText = await response.text();
-      throw new Error(`ElevenLabs API error (${response.status}): ${errorText}`);
+      console.error(`[TTS] ElevenLabs Error (${response.status}):`, errorText);
+      throw new Error(`ElevenLabs API error: ${response.status} - ${errorText}`);
     }
 
     const arrayBuffer = await response.arrayBuffer();
