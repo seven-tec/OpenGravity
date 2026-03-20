@@ -123,19 +123,34 @@ _Todo operacional._`, { parse_mode: 'Markdown' });
         // Output Voice response if TTS is enabled
         if (tts.isEnabled() && response.length < 2000) {
           try {
-            const ttsResult = await tts.synthesize({ text: response });
-            if (ttsResult.audioBase64) {
-              await ctx.replyWithVoice(new InputFile(Buffer.from(ttsResult.audioBase64, 'base64'), 'response.mp3'));
-            } else {
+            // PLAN A: ElevenLabs
+            console.log(`[Handler] Plan A: Synthesizing with ElevenLabs...`);
+            const audioBuffer = await tts.generateWithEleven(response);
+            console.log('[Handler] ElevenLabs Success, sending voice message');
+            await ctx.replyWithVoice(new InputFile(audioBuffer, 'response.mp3'));
+          } catch (error) {
+            // PLAN B: Notification + Google TTS
+            console.error("[Handler] Plan A failed, activating fallback:", error);
+            
+            // Mensaje silencioso para no molestar tanto
+            await ctx.reply("⚠️ Cuota de ElevenLabs agotada o error de API. Usando voz de respaldo...", { 
+              disable_notification: true 
+            });
+
+            try {
+              console.log(`[Handler] Plan B: Synthesizing with Google TTS...`);
+              const backupAudio = await tts.generateWithGoogle(response);
+              await ctx.replyWithVoice(new InputFile(backupAudio, 'backup_response.mp3'));
+            } catch (fallbackError) {
+              console.error('[Handler] Plan B also failed:', fallbackError);
               await ctx.reply(response);
             }
-          } catch (ttsError) {
-            console.error('[Handler] TTS error:', ttsError);
-            await ctx.reply(response);
           }
         } else {
+          if (!tts.isEnabled()) console.log('[Handler] TTS is disabled, sending text message');
           await ctx.reply(response);
         }
+
       } catch (error) {
         console.error('[Handler] Voice error:', error);
         await ctx.api.editMessageText(ctx.chat!.id, msg.message_id, '❌ Error procesando el audio.');
