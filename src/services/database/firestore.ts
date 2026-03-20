@@ -77,6 +77,23 @@ export class FirestoreService {
       this.handleFirestoreError(error);
     }
   }
+  
+  async addWorkout(userId: string, workout: any): Promise<void> {
+    if (!this.isInitialized || !this.db) return;
+
+    try {
+      // Usamos el ID de usuario para la colección de workouts, 
+      // pero si es Pablo (855084566) lo guardamos en su ruta específica si así se prefiere.
+      // Siguiendo el pedido del usuario: "users/855084566/workouts"
+      const docRef = this.db.collection('users').doc(userId).collection('workouts').doc();
+      await docRef.set({
+        ...workout,
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+    } catch (error) {
+      this.handleFirestoreError(error);
+    }
+  }
 
   async getRecentMessages(userId: string, limit: number): Promise<any[]> {
     if (!this.isInitialized || !this.db) return [];

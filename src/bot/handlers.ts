@@ -1,8 +1,11 @@
+import { InputFile } from 'grammy';
 import type { AppContext } from './middleware/whitelist.js';
 import type { Agent } from '../core/agent.js';
 import type { DatabaseManager } from '../core/database.js';
+import type { AudioService } from '../services/audio/audio_service.js';
+import type { TTSInterface } from '../services/audio/tts_interface.js';
 
-export function createHandlers(agent: Agent, db: DatabaseManager) {
+export function createHandlers(agent: Agent, db: DatabaseManager, audio: AudioService, tts: TTSInterface) {
   return {
     async onStart(ctx: AppContext): Promise<void> {
       await ctx.reply(`🤖 *OpenGravity v1.0 Activado*
@@ -92,7 +95,51 @@ _Todo operacional._`, { parse_mode: 'Markdown' });
     },
 
     async onVoice(ctx: AppContext): Promise<void> {
-      await ctx.reply('🎤 Mensajes de voz detectados. Usa /help para más info sobre STT.');
+      const voice = ctx.message?.voice;
+      if (!voice) return;
+
+      const msg = await ctx.reply('🎤 _Escuchando..._', { parse_mode: 'Markdown' });
+
+      try {
+        const file = await ctx.getFile();
+        const result = await audio.processVoice(voice.file_id, file.file_path!);
+
+        if (result.error) {
+          await ctx.api.editMessageText(ctx.chat!.id, msg.message_id, `❌ Error en transcripción: ${result.error}`);
+          return;
+        }
+
+        if (!result.text) {
+          await ctx.api.editMessageText(ctx.chat!.id, msg.message_id, '⚠️ No se pudo extraer texto del audio.');
+          return;
+        }
+
+        await ctx.api.editMessageText(ctx.chat!.id, msg.message_id, `📝 _Transcripción:_ "${result.text}"`, { parse_mode: 'Markdown' });
+        
+        // Process with agent
+        const userId = ctx.from!.id.toString();
+        const response = await agent.process(userId, result.text);
+        
+        // Output Voice response if TTS is enabled
+        if (tts.isEnabled() && response.length < 2000) {
+          try {
+            const ttsResult = await tts.synthesize({ text: response });
+            if (ttsResult.audioBase64) {
+              await ctx.replyWithVoice(new InputFile(Buffer.from(ttsResult.audioBase64, 'base64'), 'response.mp3'));
+            } else {
+              await ctx.reply(response);
+            }
+          } catch (ttsError) {
+            console.error('[Handler] TTS error:', ttsError);
+            await ctx.reply(response);
+          }
+        } else {
+          await ctx.reply(response);
+        }
+      } catch (error) {
+        console.error('[Handler] Voice error:', error);
+        await ctx.api.editMessageText(ctx.chat!.id, msg.message_id, '❌ Error procesando el audio.');
+      }
     },
   };
 }

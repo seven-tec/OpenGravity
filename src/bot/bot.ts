@@ -5,11 +5,15 @@ import { createHandlers } from './handlers.js';
 import type { Agent } from '../core/agent.js';
 import type { DatabaseManager } from '../core/database.js';
 import type { Config } from '../config.js';
+import type { AudioService } from '../services/audio/audio_service.js';
+import type { TTSInterface } from '../services/audio/tts_interface.js';
 
 export async function createBot(
   config: Config,
   agent: Agent,
-  db: DatabaseManager
+  db: DatabaseManager,
+  audio: AudioService,
+  tts: TTSInterface
 ): Promise<Bot<AppContext>> {
   const bot = new Bot<AppContext>(config.telegram.botToken);
 
@@ -22,7 +26,7 @@ export async function createBot(
 
   bot.use(createWhitelistMiddleware(config.telegram.allowedUserIds));
 
-  const handlers = createHandlers(agent, db);
+  const handlers = createHandlers(agent, db, audio, tts);
 
   bot.command('start', handlers.onStart);
   bot.command('help', handlers.onHelp);

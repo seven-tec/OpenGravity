@@ -1,21 +1,28 @@
 import type { Tool } from './base.js';
 import { GetCurrentTimeTool, GetRecentMessagesTool, ExecuteShellTool, setDatabase } from './system_tools.js';
+import { RegistrarEntrenamientoTool, setFirestore } from './fitness_tools.js';
 import type { Config } from '../config.js';
 import type { DatabaseManager } from '../core/database.js';
+import type { FirestoreService } from '../services/database/firestore.js';
 
 export class ToolRegistry {
   private tools: Map<string, Tool> = new Map();
 
-  initialize(config: Config, db?: DatabaseManager): void {
+  initialize(config: Config, db?: DatabaseManager, firestore?: FirestoreService): void {
     this.register(new GetCurrentTimeTool());
     this.register(new GetRecentMessagesTool());
     this.register(new ExecuteShellTool({
       userId: '',
       shellTimeoutMs: config.shell.timeoutMs,
     }));
+    this.register(new RegistrarEntrenamientoTool());
 
     if (db) {
       setDatabase(db);
+    }
+    
+    if (firestore) {
+      setFirestore(firestore);
     }
 
     console.log(`[ToolRegistry] Initialized ${this.tools.size} tools:`);

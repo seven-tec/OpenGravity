@@ -7,6 +7,8 @@ import { ToolRegistry } from './tools/registry.js';
 import { Agent } from './core/agent.js';
 import { createBot } from './bot/bot.js';
 import { FirestoreService } from './services/database/firestore.js';
+import { AudioService } from './services/audio/audio_service.js';
+import { TTSInterface } from './services/audio/tts_interface.js';
 
 // Override system DNS if needed
 try {
@@ -55,12 +57,15 @@ async function main() {
 
   const tools = new ToolRegistry();
   await db.initialize();
-  tools.initialize(config, db);
+  tools.initialize(config, db, firestore);
   console.log(`[Tools] ${tools.names.length} tools registered`);
 
   const agent = new Agent(config, db, tools, firestore);
 
-  const bot = await createBot(config, agent, db);
+  const audio = new AudioService(config);
+  const tts = new TTSInterface(config);
+
+  const bot = await createBot(config, agent, db, audio, tts);
   console.log('[Bot] Ready - Starting long polling...');
 
   const healthServer = createHealthCheckServer();

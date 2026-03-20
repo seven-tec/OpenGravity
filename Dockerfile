@@ -14,6 +14,9 @@ FROM node:20-slim
 
 WORKDIR /app
 
+# Instalar ffmpeg para procesamiento de audio
+RUN apt-get update && apt-get install -y ffmpeg && rm -rf /var/lib/apt/lists/*
+
 # Asegurar que el usuario node (UID 1000) sea el dueño del directorio de trabajo
 RUN chown -R node:node /app
 
