@@ -43,7 +43,7 @@ function createHealthCheckServer(): http.Server {
 }
 
 async function main() {
-  console.log('🤖 OpenGravity Core v1.0 - Initializing...');
+  console.log('🤖 OpenGravity Core v1.1-ANTIGRAVITY - Initializing...');
 
   const config = parseConfig(process.env as EnvSchema);
 
