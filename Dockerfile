@@ -1,5 +1,5 @@
 FROM golang:1.24-bookworm AS gog-builder
-RUN go install github.com/steipete/gogcli/cmd/gog@latest
+RUN CGO_ENABLED=0 go install github.com/steipete/gogcli/cmd/gog@latest
 
 FROM node:20-slim AS builder
 
