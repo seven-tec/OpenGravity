@@ -1,9 +1,3 @@
-FROM golang:1.24-alpine AS gog-builder
-RUN apk add --no-cache git
-WORKDIR /build
-RUN git clone https://github.com/steipete/gogcli.git .
-RUN CGO_ENABLED=0 go build -o /go/bin/gog ./cmd/gog/main.go
-
 FROM node:20-slim AS builder
 
 WORKDIR /app
@@ -20,11 +14,15 @@ FROM node:20-slim
 
 WORKDIR /app
 
-# Instalar ffmpeg para procesamiento de audio y ca-certificates
-RUN apt-get update && apt-get install -y ffmpeg ca-certificates && rm -rf /var/lib/apt/lists/*
+# Instalar ffmpeg para procesamiento de audio, ca-certificates y dependencias para descargar
+RUN apt-get update && apt-get install -y ffmpeg ca-certificates curl tar && rm -rf /var/lib/apt/lists/*
 
-# Copiar el binario de gog desde el builder de Go
-COPY --from=gog-builder /go/bin/gog /usr/local/bin/gog
+# Descargar e instalar binario pre-compilado de gogcli directamente (evita fallas de RAM al compilar)
+RUN curl -L -o gog.tar.gz https://github.com/steipete/gogcli/releases/download/v0.12.0/gogcli_0.12.0_linux_amd64.tar.gz \
+    && tar -xzf gog.tar.gz gog \
+    && mv gog /usr/local/bin/ \
+    && chmod +x /usr/local/bin/gog \
+    && rm gog.tar.gz
 
 # Asegurar que el usuario node (UID 1000) sea el dueño del directorio de trabajo
 RUN chown -R node:node /app
