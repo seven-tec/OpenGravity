@@ -1,3 +1,6 @@
+FROM golang:1.24-alpine AS gog-builder
+RUN go install github.com/steipete/gogcli/cmd/gog@latest
+
 FROM node:20-slim AS builder
 
 WORKDIR /app
@@ -14,13 +17,11 @@ FROM node:20-slim
 
 WORKDIR /app
 
-# Instalar herramientas necesarias (ffmpeg, golang)
-RUN apt-get update && apt-get install -y ffmpeg golang-go git && rm -rf /var/lib/apt/lists/*
+# Instalar ffmpeg para procesamiento de audio y ca-certificates
+RUN apt-get update && apt-get install -y ffmpeg ca-certificates && rm -rf /var/lib/apt/lists/*
 
-# Configurar Go e instalar gogcli
-ENV GOPATH=/home/node/go
-ENV PATH=$PATH:/usr/local/go/bin:$GOPATH/bin
-RUN go install github.com/steipete/gogcli/cmd/gog@latest
+# Copiar el binario de gog desde el builder de Go
+COPY --from=gog-builder /go/bin/gog /usr/local/bin/gog
 
 # Asegurar que el usuario node (UID 1000) sea el dueño del directorio de trabajo
 RUN chown -R node:node /app
