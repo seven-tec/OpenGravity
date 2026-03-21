@@ -1,4 +1,4 @@
-FROM golang:1.24-bookworm AS gog-builder
+FROM golang:1.24-alpine AS gog-builder
 RUN CGO_ENABLED=0 go install github.com/steipete/gogcli/cmd/gog@latest
 
 FROM node:20-slim AS builder
