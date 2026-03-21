@@ -51,7 +51,14 @@ async function main() {
   if (process.env.GOG_CREDENTIALS) {
     try {
       const credsPath = path.join(process.cwd(), 'adc.json');
-      fs.writeFileSync(credsPath, process.env.GOG_CREDENTIALS);
+      let credsSource = process.env.GOG_CREDENTIALS.trim();
+      
+      // If it doesn't look like JSON, assume it's Base64
+      if (!credsSource.startsWith('{')) {
+        credsSource = Buffer.from(credsSource, 'base64').toString('utf8');
+      }
+
+      fs.writeFileSync(credsPath, credsSource);
       process.env.GOG_AUTH_MODE = 'adc';
       process.env.GOOGLE_APPLICATION_CREDENTIALS = credsPath;
       console.log('🔐 [Auth] Google Workspace ADC configured from environment');
