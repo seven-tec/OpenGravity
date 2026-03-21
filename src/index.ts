@@ -1,6 +1,8 @@
 import { config } from 'dotenv';
 import http from 'http';
 import dns from 'node:dns';
+import fs from 'fs';
+import path from 'path';
 import { parseConfig, type EnvSchema } from './config.js';
 import { DatabaseManager } from './core/database.js';
 import { ToolRegistry } from './tools/registry.js';
@@ -44,6 +46,19 @@ function createHealthCheckServer(): http.Server {
 
 async function main() {
   console.log('🤖 OpenGravity Core v1.2-ARCHITECT - Initializing...');
+
+  // --- Google Workspace ADC Secret Injection ---
+  if (process.env.GOG_CREDENTIALS) {
+    try {
+      const credsPath = path.join(process.cwd(), 'adc.json');
+      fs.writeFileSync(credsPath, process.env.GOG_CREDENTIALS);
+      process.env.GOG_AUTH_MODE = 'adc';
+      process.env.GOOGLE_APPLICATION_CREDENTIALS = credsPath;
+      console.log('🔐 [Auth] Google Workspace ADC configured from environment');
+    } catch (e) {
+      console.error('❌ [Auth] Failed to write Google credentials', e);
+    }
+  }
 
   const config = parseConfig(process.env as EnvSchema);
 
