@@ -112,6 +112,31 @@ export class FirestoreService {
       this.handleFirestoreError(error);
     }
   }
+  async queryKnowledge(userId: string, category: string, limit: number = 5): Promise<any[]> {
+    if (!this.isInitialized || !this.db) return [];
+
+    try {
+      const snapshot = await this.db
+        .collection('users')
+        .doc(userId)
+        .collection('knowledge')
+        .doc(category)
+        .collection('items')
+        .orderBy('createdAt', 'desc')
+        .limit(limit)
+        .get();
+
+      return snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+        createdAt: doc.data().createdAt?.toDate().toISOString() || new Date().toISOString()
+      }));
+    } catch (error) {
+      this.handleFirestoreError(error);
+      return [];
+    }
+  }
+
 
   async getRecentMessages(userId: string, limit: number): Promise<any[]> {
     if (!this.isInitialized || !this.db) return [];

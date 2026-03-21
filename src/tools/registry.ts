@@ -1,6 +1,8 @@
 import type { Tool } from './base.js';
 import { GetCurrentTimeTool, GetRecentMessagesTool, ExecuteShellTool, setDatabase } from './system_tools.js';
 import { ManagePersonalKnowledgeTool, setFirestore } from './knowledge_tools.js';
+import { ImageGenerationTool, GoogleSearchTool } from './ai_tools.js';
+import { GoogleWorkspaceTool } from './google_tools.js';
 import type { Config } from '../config.js';
 import type { DatabaseManager } from '../core/database.js';
 import type { FirestoreService } from '../services/database/firestore.js';
@@ -16,6 +18,9 @@ export class ToolRegistry {
       shellTimeoutMs: config.shell.timeoutMs,
     }));
     this.register(new ManagePersonalKnowledgeTool());
+    this.register(new ImageGenerationTool());
+    this.register(new GoogleSearchTool());
+    this.register(new GoogleWorkspaceTool());
 
     if (db) {
       setDatabase(db);

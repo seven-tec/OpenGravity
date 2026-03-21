@@ -8,7 +8,7 @@ const execAsync = promisify(exec);
 const isWindows = process.platform === 'win32';
 
 const ALLOWED_COMMANDS = isWindows
-  ? new Set(['dir', 'pwd', 'whoami', 'type', 'echo', 'node', 'npm', 'git', 'curl', 'cls', 'cd', 'findstr', 'where'])
+  ? new Set(['dir', 'pwd', 'whoami', 'type', 'echo', 'node', 'npm', 'git', 'curl', 'cls', 'cd', 'findstr', 'where', 'gog'])
   : new Set(['ls', 'pwd', 'whoami', 'date', 'cat', 'echo', 'node', 'npm', 'git', 'curl', 'clear', 'cd', 'find', 'grep', 'head', 'tail']);
 
 const COMMAND_TIMEOUT_MS = 30000;

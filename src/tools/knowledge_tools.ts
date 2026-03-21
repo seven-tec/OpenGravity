@@ -24,7 +24,7 @@ export class ManagePersonalKnowledgeTool implements Tool {
           },
           data: { 
             type: 'object', 
-            description: "Objeto con los datos estructurados (ej: {ejercicio: 'Prensa', peso: 200} o {personaje: 'Erick', nota: 'Perdió un brazo'})." 
+            description: "Objeto con los datos estructurados (ej: {ejercicio: 'Prensa', peso: 200}). Obligatorio para 'store' y 'update'." 
           },
           action: { 
             type: 'string', 
@@ -32,7 +32,7 @@ export class ManagePersonalKnowledgeTool implements Tool {
             enum: ["store", "update", "query"] 
           }
         },
-        required: ['category', 'data', 'action'],
+        required: ['category', 'action'], // data es opcional para query
       },
     };
   }
@@ -46,6 +46,25 @@ export class ManagePersonalKnowledgeTool implements Tool {
     const targetUserId = '855084566';
 
     try {
+      if (action === 'query') {
+        const results = await (firestore as any).queryKnowledge(targetUserId, category, 5);
+        if (results.length === 0) {
+          return `No encontré nada guardado recientemente en la categoría '${category}'.`;
+        }
+        
+        const context = results.map((item: any) => {
+          const { id, createdAt, metadata, ...rest } = item;
+          // Si tiene un campo 'content', lo priorizamos, sino stringificamos el objeto
+          return rest.content || JSON.stringify(rest);
+        }).join("\n");
+        
+        return `Esto es lo que recordamos de '${category}':\n${context}`;
+      }
+
+      if ((action === 'store' || action === 'update') && !data) {
+        return `Para la acción '${action}' necesito el objeto 'data' con la información.`;
+      }
+
       await firestore.saveKnowledge(targetUserId, category, action, data);
 
       if (action === 'store') {
