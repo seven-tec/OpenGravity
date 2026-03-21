@@ -3,7 +3,6 @@ RUN apk add --no-cache git
 WORKDIR /build
 RUN git clone https://github.com/steipete/gogcli.git .
 RUN CGO_ENABLED=0 go build -o /go/bin/gog ./cmd/gog/main.go
-RUN CGO_ENABLED=0 go build -o /go/bin/gog ./cmd/gog/main.go
 
 FROM node:20-slim AS builder
 
