@@ -14,8 +14,13 @@ FROM node:20-slim
 
 WORKDIR /app
 
-# Instalar ffmpeg para procesamiento de audio
-RUN apt-get update && apt-get install -y ffmpeg && rm -rf /var/lib/apt/lists/*
+# Instalar herramientas necesarias (ffmpeg, golang)
+RUN apt-get update && apt-get install -y ffmpeg golang-go git && rm -rf /var/lib/apt/lists/*
+
+# Configurar Go e instalar gogcli
+ENV GOPATH=/home/node/go
+ENV PATH=$PATH:/usr/local/go/bin:$GOPATH/bin
+RUN go install github.com/steipete/gogcli/cmd/gog@latest
 
 # Asegurar que el usuario node (UID 1000) sea el dueño del directorio de trabajo
 RUN chown -R node:node /app
