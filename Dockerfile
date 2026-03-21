@@ -1,6 +1,9 @@
 FROM golang:1.24-alpine AS gog-builder
 RUN apk add --no-cache git
-RUN CGO_ENABLED=0 go install github.com/steipete/gogcli/cmd/gog@latest
+WORKDIR /build
+RUN git clone https://github.com/steipete/gogcli.git .
+RUN CGO_ENABLED=0 go build -o /go/bin/gog ./cmd/gog/main.go
+RUN CGO_ENABLED=0 go build -o /go/bin/gog ./cmd/gog/main.go
 
 FROM node:20-slim AS builder
 
