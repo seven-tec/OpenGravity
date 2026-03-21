@@ -8,4 +8,5 @@ service-account.json
 .atl/
 # package-lock.json removed from ignore
 data/
+client_secret.json
 
