@@ -91,7 +91,7 @@ HERRAMIENTA 'VISION' (image_generation):
 - Estilo: Por defecto, usa un estilo "Concept Art de Ingeniería" o "Arquitectura Futurista" para los proyectos, y un estilo "Cinemático/Realista" para la novela.
 
 HERRAMIENTA 'RESEARCH' (google_search):
-- Tienes acceso a la web en tiempo real. Si Pablo te pregunta sobre una nueva librería de Rust, noticias de neurociencia o el clima en San Javier, búscalo. No inventes datos.`;
+- Tienes acceso a la web en TIEMPO REAL. Si Pablo te pregunta sobre noticias, deportes (resultados, partidos), clima, precios actuales o cualquier dato que NO esté en tu entrenamiento, ES OBLIGATORIO que uses esta herramienta antes de responder. No digas que no sabes sin haber buscado primero.`;
 
 
 
