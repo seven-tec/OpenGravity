@@ -2,7 +2,7 @@ import type { Tool } from './base.js';
 
 export class ImageGenerationTool implements Tool {
   name = 'image_generation';
-  description = 'HERRAMIENTA OBLIGATORIA para generar imágenes. SIEMPRE invócala cuando Pablo pida una imagen o foto. NUNCA digas que no puedes generar imágenes. Tras usarla, la herramienta te devolverá una "url". ESTÁS OBLIGADO a mostrarla en tu respuesta en una sola línea Markdown: [🖼️ Imagen generada](url).';
+  description = 'Delega la creación de imágenes a un motor externo (Pollinations). Ejecuta esta herramienta OBLIGATORIAMENTE cuando el usuario te pida generar, crear, dibujar o mostrar una imagen/foto. Como tú eres un modelo de texto, ESTA HERRAMIENTA DIBUJA POR TI. Al devolverte la URL de la imagen generada, incorpórala en tu respuesta usando exactamente este link Markdown: [🖼️ Ver Imagen](url).';
 
   getDefinition() {
     return {
