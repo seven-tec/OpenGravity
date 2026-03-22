@@ -198,19 +198,21 @@ export class GithubTool implements Tool {
       return JSON.stringify({ success: false, error: 'GITHUB_TOKEN missing', _stopLoop: true });
     }
 
-    let finalOwner = owner || this.username;
-    let finalRepo = repo || 'OpenGravity';
+    // Normalizar para evitar fallos tontos si el usuario pasa el nombre en otro formato
+    let finalOwner = owner;
+    let finalRepo = repo;
 
-    if (!finalOwner) {
-      return JSON.stringify({ 
-        success: false, 
-        error: "CONFIGURACIÓN INCOMPLETA: Faltan 'owner' o GITHUB_USERNAME en el sistema. Asegúrate de definir GITHUB_USERNAME en tu .env", 
-        _stopLoop: true 
-      });
-    }
-
-    if (finalRepo === 'opengravity' || finalRepo === 'OpenGravity') {
-      // Normalizar para evitar fallos tontos si el usuario pasa el nombre en otro formato
+    if (action !== 'list_repositories') {
+      if (!finalOwner) {
+        if (this.username) {
+          finalOwner = this.username;
+        } else {
+          return JSON.stringify({ success: false, error: 'Owner is required for this action, or configure githubUsername.', _stopLoop: true });
+        }
+      }
+      if (!finalRepo) {
+        return JSON.stringify({ success: false, error: 'Repo is required for this action.', _stopLoop: true });
+      }
     }
 
     const headers = { 'Authorization': `token ${this.token}`, 'Accept': 'application/vnd.github.v3+json', 'User-Agent': 'OpenGravity-Bot' };

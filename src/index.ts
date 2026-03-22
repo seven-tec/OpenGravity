@@ -56,7 +56,12 @@ async function main() {
     }
   }
   
+  console.log(`[System] Process ID: ${process.pid}`);
   console.log('[Bot] Webhook check finished.');
+  
+  console.log('[Bot] Waiting 5 seconds for Telegram API to stabilize...');
+  await new Promise(resolve => setTimeout(resolve, 5000));
+  
   console.log('[OpenGravity] Bot is live! Press Ctrl+C to stop.');
   await bot.start();
 
