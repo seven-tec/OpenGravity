@@ -1,12 +1,15 @@
+import { z } from 'zod';
 import type { Tool, ToolDependencies } from '../base.js';
 
 export default class GetCurrentTimeTool implements Tool {
   name = 'get_current_time';
   description = 'Get the current date and time in ISO format.';
 
-  constructor(_deps: ToolDependencies) {
-    // No dependencies needed for this tool
-  }
+  schema = z.object({
+    timezone: z.string().optional().describe('Zona horaria IANA (ej: UTC, America/Argentina/Buenos_Aires)'),
+  });
+
+  constructor(_deps: ToolDependencies) {}
 
   getDefinition() {
     return {
@@ -26,7 +29,7 @@ export default class GetCurrentTimeTool implements Tool {
   }
 
   async execute(params: Record<string, unknown>): Promise<string> {
-    const timezone = params.timezone as string | undefined;
+    const { timezone } = params as { timezone?: string };
     const now = new Date();
     
     if (timezone) {

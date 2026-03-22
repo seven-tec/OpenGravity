@@ -1,3 +1,4 @@
+import { z } from 'zod';
 import type { Config } from '../config.js';
 import type { DatabaseManager } from '../core/database.js';
 import type { FirestoreService } from '../services/database/firestore.js';
@@ -13,6 +14,7 @@ export type ToolConstructor = new (deps: ToolDependencies) => Tool;
 export interface Tool {
   name: string;
   description: string;
+  schema?: z.ZodObject<any>; // Esquema de validación opcional
   execute(params: Record<string, unknown>): Promise<string>;
   getDefinition(): {
     name: string;

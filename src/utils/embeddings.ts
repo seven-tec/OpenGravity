@@ -29,10 +29,13 @@ export async function getEmbedding(text: string, hfToken: string, retries = 3): 
       if (Array.isArray(result) && typeof result[0] === 'number') return result;
       if (Array.isArray(result) && Array.isArray(result[0])) return result[0];
 
-      throw new Error("Formato de embedding inesperado");
+      throw new Error("Formato de embedding inesperado del proveedor");
     } catch (error) {
-      if (i === retries - 1) throw error;
-      console.error(`[Embeddings] Attempt ${i + 1} failed, retrying...`, error);
+      if (i === retries - 1) {
+        console.error(`[Embeddings] FATAL: Failed to get embedding after ${retries} attempts. HF might be down.`);
+        throw new Error(`Servicio de Embeddings no disponible (HF 503/Error). Pablo, verifica la conexión o el estado de Hugging Face. El sistema de memoria semántica está degradado.`);
+      }
+      console.warn(`[Embeddings] Attempt ${i + 1} failed, retrying in 1s...`, (error as Error).message);
       await new Promise(resolve => setTimeout(resolve, 1000));
     }
   }

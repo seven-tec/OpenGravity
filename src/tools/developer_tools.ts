@@ -2,17 +2,25 @@ import fs from 'fs';
 import path from 'path';
 import { exec } from 'child_process';
 import { promisify } from 'util';
+import { z } from 'zod';
 import type { Tool, ToolDependencies } from './base.js';
 
 const execAsync = promisify(exec);
 
 export default class DeveloperTool implements Tool {
   name = 'developer_tool';
+  description = 'Herramienta para que el Agente Arquitecto pueda modificar su propio código y verificar cambios. Permite escribir archivos, parcharlos y ejecutar comandos de construcción.';
 
-  constructor(_deps: ToolDependencies) {
-    // Current implementation uses process.cwd() and whitelisted commands
-  }
-  description = 'Herramienta para que el Agente Arquitecto pueda modificar su propio código y verificar cambios. Permite escribir archivos, parcharlos y ejecutar comandos de construcción (build/typecheck).';
+  schema = z.object({
+    action: z.enum(['write_file', 'patch_file', 'run_command']).describe('Acción de desarrollo a realizar'),
+    path: z.string().optional().describe('Ruta relativa al archivo'),
+    content: z.string().optional().describe('Contenido completo (para write_file)'),
+    search: z.string().optional().describe('Texto a buscar (para patch_file)'),
+    replace: z.string().optional().describe('Texto de reemplazo (para patch_file)'),
+    command: z.enum(['npm run build', 'npm run typecheck', 'npm test']).optional().describe('Comando a ejecutar'),
+  });
+
+  constructor(_deps: ToolDependencies) {}
 
   getDefinition() {
     return {

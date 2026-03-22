@@ -97,6 +97,19 @@ export class ToolRegistry {
     const safeParams = params ?? {};
 
     try {
+      // VALIDACIÓN AUTOMÁTICA CON ZOD
+      if (tool.schema) {
+        const validation = tool.schema.safeParse(safeParams);
+        if (!validation.success) {
+          const errors = validation.error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join(', ');
+          return JSON.stringify({ 
+            error: `Parámetros inválidos: ${errors}`, 
+            _toolError: true,
+            _stopLoop: true 
+          });
+        }
+      }
+
       const result = await tool.execute(safeParams);
       const resultObj = tryParseJson(result);
       if (resultObj && resultObj.error) {

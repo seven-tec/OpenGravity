@@ -128,6 +128,26 @@ export class FirestoreService {
     }
   }
 
+  async saveTrace(userId: string, traceId: string, event: any): Promise<void> {
+    if (!this.isInitialized || !this.db) return;
+
+    try {
+      const traceRef = this.db
+        .collection('users')
+        .doc(userId)
+        .collection('traces')
+        .doc(traceId)
+        .collection('events');
+      
+      await traceRef.add({
+        ...event,
+        createdAt: admin.firestore.FieldValue.serverTimestamp()
+      });
+    } catch (error) {
+      console.error(`[Firestore] Failed to save trace event:`, (error as Error).message);
+    }
+  }
+
   async semanticSearch(userId: string, category: string, query: string, limit: number = 5): Promise<any[]> {
     if (!this.isInitialized || !this.db || !this.hfToken) {
       // Fallback a búsqueda normal si no hay token o no está inicializado

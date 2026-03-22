@@ -25,6 +25,23 @@ export class Agent {
     if (Agent.events.length > 100) Agent.events.shift();
   }
 
+  private emitEvent(userId: string, type: AgentEvent['type'], content: any, traceId?: string) {
+    const event = {
+      timestamp: new Date().toISOString(),
+      type,
+      userId,
+      content
+    };
+    
+    // Static feed for HUD
+    Agent.addEvent(userId, type, content);
+
+    // Persistence for Observability
+    if (traceId && this.firestore?.initialized) {
+      this.firestore.saveTrace(userId, traceId, event).catch(() => {});
+    }
+  }
+
   private orchestrator: LLMOrchestrator;
   private db: DatabaseManager;
   private tools: ToolRegistry;
@@ -147,6 +164,10 @@ DISTINCIÓN DE HERRAMIENTAS:
     this.db.addMessage(userId, 'user', userMessage);
     this.firestore.addMessage(userId, 'user', userMessage).catch(() => {});
 
+    // Trace initialization for observability
+    const traceId = `trace_${Date.now()}`;
+    this.emitEvent(userId, 'thought', `Iniciando procesamiento: "${userMessage}"`, traceId);
+
     let lastToolHash = '';
 
     for (let iteration = 0; iteration < maxIterations; iteration++) {
@@ -164,7 +185,7 @@ DISTINCIÓN DE HERRAMIENTAS:
         console.log(`[Agent] toolCalls: ${response.toolCalls?.length ?? 0}`);
 
         if (response.content) {
-          Agent.addEvent(userId, 'thought', response.content);
+          this.emitEvent(userId, 'thought', response.content, traceId);
         }
 
         const content = response.content?.trim();
@@ -198,7 +219,7 @@ DISTINCIÓN DE HERRAMIENTAS:
             const result = await this.tools.execute(toolCall.name, toolCall.arguments);
             console.log(`[Agent] Result: ${result.substring(0, 100)}...`);
 
-            Agent.addEvent(userId, 'tool_result', { name: toolCall.name, result: result.substring(0, 500) });
+            this.emitEvent(userId, 'tool_result', { name: toolCall.name, result: result.substring(0, 500) }, traceId);
 
             // Safe parsing helper to check for control signals (like _stopLoop)
             try {
@@ -221,7 +242,19 @@ DISTINCIÓN DE HERRAMIENTAS:
           }
 
           if (hasErrors) {
-            console.log('[Agent] Stopping loop due to tool errors');
+            console.log(`[Agent] Tool error detected: ${errorMessage}`);
+            
+            // SELF-CORRECTION FEEDBACK
+            // Si nos quedan iteraciones, inyectamos el diagnóstico en lugar de rendirnos
+            if (iteration < maxIterations - 1) {
+              const diagnosticMsg = `DIAGNÓSTICO: La herramienta '${toolCalls[0].name}' falló con el error: "${errorMessage}". Pablo espera que resuelvas esto. Analiza por qué falló y probá una estrategia alternativa o usá otra herramienta. No repitas el mismo error.`;
+              messages.push({ role: 'system', content: diagnosticMsg });
+              this.emitEvent(userId, 'error', diagnosticMsg, traceId);
+              console.log('[Agent] Continuing with diagnostic feedback...');
+              continue;
+            }
+
+            console.log('[Agent] Stopping loop due to final tool error');
             const errorResponse = `Error: ${errorMessage}`;
             this.db.addMessage(userId, 'assistant', errorResponse);
             this.firestore.addMessage(userId, 'assistant', errorResponse).catch(() => {});
@@ -234,7 +267,7 @@ DISTINCIÓN DE HERRAMIENTAS:
 
         if (content && content !== 'undefined' && content !== 'null') {
           console.log('[Agent] Got valid content');
-          Agent.addEvent(userId, 'answer', content);
+          this.emitEvent(userId, 'answer', content, traceId);
           this.db.addMessage(userId, 'assistant', content);
           this.firestore.addMessage(userId, 'assistant', content).catch(() => {});
           return content;

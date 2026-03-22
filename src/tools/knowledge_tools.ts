@@ -1,30 +1,16 @@
+import { z } from 'zod';
 import type { Tool, ToolDependencies } from './base.js';
 import type { FirestoreService } from '../services/database/firestore.js';
 
 export default class ManagePersonalKnowledgeTool implements Tool {
   name = 'manage_personal_knowledge';
-  description = `Base de conocimiento personal de Pablo (almacenado en Firestore).
+  description = `Base de conocimiento personal de Pablo (almacenado en Firestore).`;
 
-USA ESTA HERRAMIENTA PARA:
-- Guardar información que quieres RECORDAR después (recuerdos, deudas, preferencias)
-- Clasificar notas y aprendizajes por categoría (fitness, finanzas, novela, logística, estrategia, aprendizaje, etc.)
-- Consultar información guardada anteriormente
-- Actualizar entradas existentes
-
-EJEMPLOS DE USO:
-- "guarda que Roberto me debe $50 de la cena" → action: store, category: deudas
-- "recuerda que nuestra visión es automatizar todo" → action: store, category: estrategia
-- "recuerda que mi hipertrofia es de 3x10" → action: store, category: fitness  
-- "qué ejercicios hice la semana pasada?" → action: query, category: fitness
-- "según nuestra estrategia, cuál es el próximo hito?" → action: query, category: estrategia
-- "actualiza mi peso en hipertrofia a 90kg" → action: update, category: fitness
-
-NO USES ESTA HERRAMIENTA PARA:
-- Crear eventos de calendario o reuniones
-- Gestionar emails de Gmail
-- Buscar archivos en Google Drive
-- Cualquier cosa relacionada con Google Workspace
-- Para eso, usa 'google_workspace'`;
+  schema = z.object({
+    category: z.string().describe("Categoría de la info (ej: 'fitness', 'finanzas')."),
+    action: z.enum(["store", "update", "query"]).describe("Acción a realizar"),
+    data: z.any().optional().describe("Objeto con los datos estructurados."),
+  });
 
   private firestore: FirestoreService | undefined;
 

@@ -1,9 +1,15 @@
+import { z } from 'zod';
 import type { Tool, ToolDependencies } from '../base.js';
 import type { DatabaseManager } from '../../core/database.js';
 
 export default class GetRecentMessagesTool implements Tool {
   name = 'get_recent_messages';
   description = 'Retrieve recent conversation messages for the current user. Returns the last N messages from SQLite database.';
+
+  schema = z.object({
+    limit: z.number().int().min(1).max(100).default(10).describe('Cantidad de mensajes a recuperar'),
+    search: z.string().optional().describe('Término de búsqueda opcional'),
+  });
 
   private db: DatabaseManager | undefined;
 
@@ -32,10 +38,8 @@ export default class GetRecentMessagesTool implements Tool {
     };
   }
 
-  async execute(params: Record<string, unknown> | null): Promise<string> {
-    const safeParams = params ?? {};
-    const limit = (safeParams.limit as number) || 10;
-    const search = safeParams.search as string | undefined;
+  async execute(params: Record<string, unknown>): Promise<string> {
+    const { limit, search } = params as { limit: number; search?: string };
 
     if (!this.db) {
       return JSON.stringify({ error: 'Database not initialized', _toolError: true, _stopLoop: true });

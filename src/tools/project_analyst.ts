@@ -1,14 +1,21 @@
 import fs from 'fs';
 import path from 'path';
+import { z } from 'zod';
 import type { Tool, ToolDependencies } from './base.js';
 
 export default class ProjectAnalystTool implements Tool {
   name = 'project_analyst';
+  description = 'Herramienta de introspección para analizar la arquitectura y el código de proyectos locales. Permite listar archivos, ver estructuras y leer contenidos.';
 
-  constructor(_deps: ToolDependencies) {
-    // Introspection tool, no complex deps yet
-  }
-  description = 'Herramienta de introspección para analizar la arquitectura y el código de proyectos locales. Permite listar archivos, ver estructuras y leer contenidos de cualquier directorio del sistema.';
+  schema = z.object({
+    action: z.enum(['list_files', 'read_files', 'get_structure', 'grep']).describe('Acción a realizar'),
+    directory: z.string().optional().default('.').describe('Directorio base para la operación'),
+    files: z.array(z.string()).optional().default([]).describe('Lista de archivos a leer (para read_files)'),
+    query: z.string().optional().default('').describe('Patrón de búsqueda (para grep)'),
+    recursive: z.boolean().optional().default(false).describe('Si la operación debe ser recursiva'),
+  });
+
+  constructor(_deps: ToolDependencies) {}
 
   getDefinition() {
     return {
@@ -46,12 +53,16 @@ export default class ProjectAnalystTool implements Tool {
   }
 
   async execute(params: Record<string, unknown>): Promise<string> {
-    const { action, directory = '.', files = [], query = '', recursive = false } = params as any;
+    const { action, directory, files, query, recursive } = params as { 
+      action: 'list_files' | 'read_files' | 'get_structure' | 'grep';
+      directory: string;
+      files: string[];
+      query: string;
+      recursive: boolean;
+    };
+    
     const baseDir = path.resolve(directory);
 
-    // Seguridad básica: evitar salir de C:\ o directorios sensibles si fuera necesario, 
-    // pero para Pablo (Senior) le permitimos explorar su disco.
-    
     try {
       switch (action) {
         case 'list_files':
@@ -59,7 +70,7 @@ export default class ProjectAnalystTool implements Tool {
         case 'read_files':
           return await this.readFiles(baseDir, files);
         case 'get_structure':
-          return await this.getStructure(baseDir, 3); // Límite de profundidad 3 por defecto
+          return await this.getStructure(baseDir, 3);
         case 'grep':
           return await this.grep(baseDir, query);
         default:

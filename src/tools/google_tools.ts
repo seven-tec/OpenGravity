@@ -1,5 +1,7 @@
+import { z } from 'zod';
 import { exec } from 'child_process';
 import { promisify } from 'util';
+import type { Tool, ToolDependencies } from './base.js';
 
 const execAsync = promisify(exec);
 
@@ -80,28 +82,42 @@ interface DocsExportParams {
   format: 'pdf' | 'docx' | 'txt';
 }
 
-export class GoogleWorkspaceTool implements Tool {
+export default class GoogleWorkspaceTool implements Tool {
   name = 'google_workspace';
-  description = `Gestión de calendario, email y archivos de Google Workspace (Google Calendar, Gmail, Drive, Sheets, Docs, Contacts).
+  description = `Gestión de calendario, email y archivos de Google Workspace.`;
 
-USA ESTA HERRAMIENTA PARA:
-- Crear/leer eventos en Google Calendar (actions: calendar events, calendar create, calendar update)
-- Buscar/enviar emails de Gmail (actions: gmail search, gmail send, gmail drafts)
-- Buscar archivos en Google Drive (action: drive search)
-- Listar contactos de Google Contacts (action: contacts list)
-- Leer/actualizar spreadsheets de Google Sheets (actions: sheets get, sheets update, sheets append)
-- Leer/exportar documentos de Google Docs (actions: docs cat, docs export)
+  schema = z.object({
+    action: z.enum([
+      'calendar events', 'calendar create', 'calendar update',
+      'gmail search', 'gmail send', 'gmail drafts',
+      'drive search', 'contacts list',
+      'sheets get', 'sheets update', 'sheets append',
+      'docs cat', 'docs export'
+    ]).describe('Acción a realizar en Google Workspace'),
+    calendarId: z.string().optional().default('primary'),
+    startDate: z.string().optional(),
+    endDate: z.string().optional(),
+    maxResults: z.number().optional().default(10),
+    summary: z.string().optional(),
+    startTime: z.string().optional(),
+    endTime: z.string().optional(),
+    description: z.string().optional(),
+    location: z.string().optional(),
+    attendees: z.array(z.string()).optional(),
+    eventId: z.string().optional(),
+    query: z.string().optional(),
+    to: z.string().optional(),
+    subject: z.string().optional(),
+    body: z.string().optional(),
+    cc: z.string().optional(),
+    spreadsheetId: z.string().optional(),
+    range: z.string().optional(),
+    values: z.array(z.array(z.string())).optional(),
+    documentId: z.string().optional(),
+    format: z.enum(['pdf', 'docx', 'txt']).optional(),
+  });
 
-NO USES ESTA HERRAMIENTA PARA:
-- Guardar información personal, recuerdos o datos de largo plazo del usuario
-- Clasificar notas o aprendizajes
-- Para eso, usa 'manage_personal_knowledge'
-
-PARAMETERS IMPORTANTES:
-- action: Siempre usa el enum completo (ej: 'calendar create', NO 'create' ni 'calendar')
-- startTime/endTime: Formato ISO 8601 (ej: "2024-03-20T20:00:00")
-- summary: Título del evento de calendario
-- query: Texto de búsqueda para gmail/drive (NO uses flags como --query, solo el texto)`;
+  constructor(_deps: ToolDependencies) {}
 
   private escapeShellValue(value: string): string {
     return `"${value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
@@ -343,179 +359,96 @@ PARAMETERS IMPORTANTES:
   }
 
   async execute(params: Record<string, unknown>): Promise<string> {
-    const action = params.action as string;
+    const validated = this.schema.parse(params);
+    const action = validated.action;
 
     let command: string;
 
     switch (action) {
       case 'calendar events':
-        command = this.buildCalendarEventsCommand({
-          calendarId: params.calendarId as string | undefined,
-          startDate: params.startDate as string | undefined,
-          endDate: params.endDate as string | undefined,
-          maxResults: params.maxResults as number | undefined
-        });
+        command = this.buildCalendarEventsCommand(validated);
         break;
 
       case 'calendar create':
-        if (!params.summary || !params.startTime || !params.endTime) {
-          return JSON.stringify({
-            success: false,
-            error: 'calendar create requiere: summary, startTime, endTime'
-          });
+        if (!validated.summary || !validated.startTime || !validated.endTime) {
+          throw new Error('calendar create requiere: summary, startTime, endTime');
         }
-        command = this.buildCalendarCreateCommand({
-          summary: params.summary as string,
-          startTime: params.startTime as string,
-          endTime: params.endTime as string,
-          description: params.description as string | undefined,
-          location: params.location as string | undefined,
-          attendees: params.attendees as string[] | undefined,
-          calendarId: params.calendarId as string | undefined
-        });
+        command = this.buildCalendarCreateCommand(validated as CalendarCreateParams);
         break;
 
       case 'calendar update':
-        if (!params.eventId) {
-          return JSON.stringify({
-            success: false,
-            error: 'calendar update requiere: eventId'
-          });
+        if (!validated.eventId) {
+          throw new Error('calendar update requiere: eventId');
         }
-        command = this.buildCalendarUpdateCommand({
-          eventId: params.eventId as string,
-          summary: params.summary as string | undefined,
-          startTime: params.startTime as string | undefined,
-          endTime: params.endTime as string | undefined,
-          description: params.description as string | undefined,
-          location: params.location as string | undefined
-        });
+        command = this.buildCalendarUpdateCommand(validated as CalendarUpdateParams);
         break;
 
       case 'gmail search':
-        if (!params.query) {
-          return JSON.stringify({
-            success: false,
-            error: 'gmail search requiere: query'
-          });
+        if (!validated.query) {
+          throw new Error('gmail search requiere: query');
         }
-        command = this.buildGmailSearchCommand({
-          query: params.query as string,
-          maxResults: params.maxResults as number | undefined
-        });
+        command = this.buildGmailSearchCommand(validated as GmailSearchParams);
         break;
 
       case 'gmail send':
-        if (!params.to || !params.subject || !params.body) {
-          return JSON.stringify({
-            success: false,
-            error: 'gmail send requiere: to, subject, body'
-          });
+        if (!validated.to || !validated.subject || !validated.body) {
+          throw new Error('gmail send requiere: to, subject, body');
         }
-        command = this.buildGmailSendCommand({
-          to: params.to as string,
-          subject: params.subject as string,
-          body: params.body as string,
-          cc: params.cc as string | undefined
-        });
+        command = this.buildGmailSendCommand(validated as GmailSendParams);
         break;
 
       case 'gmail drafts':
-        command = this.buildGmailDraftsCommand({
-          maxResults: params.maxResults as number | undefined
-        });
+        command = this.buildGmailDraftsCommand(validated);
         break;
 
       case 'drive search':
-        if (!params.query) {
-          return JSON.stringify({
-            success: false,
-            error: 'drive search requiere: query'
-          });
+        if (!validated.query) {
+          throw new Error('drive search requiere: query');
         }
-        command = this.buildDriveSearchCommand({
-          query: params.query as string,
-          maxResults: params.maxResults as number | undefined
-        });
+        command = this.buildDriveSearchCommand(validated as DriveSearchParams);
         break;
 
       case 'contacts list':
-        command = this.buildContactsListCommand({
-          maxResults: params.maxResults as number | undefined
-        });
+        command = this.buildContactsListCommand(validated);
         break;
 
       case 'sheets get':
-        if (!params.spreadsheetId) {
-          return JSON.stringify({
-            success: false,
-            error: 'sheets get requiere: spreadsheetId'
-          });
+        if (!validated.spreadsheetId) {
+          throw new Error('sheets get requiere: spreadsheetId');
         }
-        command = this.buildSheetsGetCommand({
-          spreadsheetId: params.spreadsheetId as string,
-          range: params.range as string | undefined
-        });
+        command = this.buildSheetsGetCommand(validated as SheetsGetParams);
         break;
 
       case 'sheets update':
-        if (!params.spreadsheetId || !params.range || !params.values) {
-          return JSON.stringify({
-            success: false,
-            error: 'sheets update requiere: spreadsheetId, range, values'
-          });
+        if (!validated.spreadsheetId || !validated.range || !validated.values) {
+          throw new Error('sheets update requiere: spreadsheetId, range, values');
         }
-        command = this.buildSheetsUpdateCommand({
-          spreadsheetId: params.spreadsheetId as string,
-          range: params.range as string,
-          values: params.values as string[][]
-        });
+        command = this.buildSheetsUpdateCommand(validated as SheetsUpdateParams);
         break;
 
       case 'sheets append':
-        if (!params.spreadsheetId || !params.range || !params.values) {
-          return JSON.stringify({
-            success: false,
-            error: 'sheets append requiere: spreadsheetId, range, values'
-          });
+        if (!validated.spreadsheetId || !validated.range || !validated.values) {
+          throw new Error('sheets append requiere: spreadsheetId, range, values');
         }
-        command = this.buildSheetsAppendCommand({
-          spreadsheetId: params.spreadsheetId as string,
-          range: params.range as string,
-          values: params.values as string[][]
-        });
+        command = this.buildSheetsAppendCommand(validated as SheetsAppendParams);
         break;
 
       case 'docs cat':
-        if (!params.documentId) {
-          return JSON.stringify({
-            success: false,
-            error: 'docs cat requiere: documentId'
-          });
+        if (!validated.documentId) {
+          throw new Error('docs cat requiere: documentId');
         }
-        command = this.buildDocsCatCommand({
-          documentId: params.documentId as string
-        });
+        command = this.buildDocsCatCommand(validated as DocsCatParams);
         break;
 
       case 'docs export':
-        if (!params.documentId || !params.format) {
-          return JSON.stringify({
-            success: false,
-            error: 'docs export requiere: documentId, format'
-          });
+        if (!validated.documentId || !validated.format) {
+          throw new Error('docs export requiere: documentId, format');
         }
-        command = this.buildDocsExportCommand({
-          documentId: params.documentId as string,
-          format: params.format as 'pdf' | 'docx' | 'txt'
-        });
+        command = this.buildDocsExportCommand(validated as DocsExportParams);
         break;
 
       default:
-        return JSON.stringify({
-          success: false,
-          error: `Unknown action: ${action}. Usa el enum completo (ej: "calendar create", NO "create")`
-        });
+        throw new Error(`Unknown action: ${action}`);
     }
 
     const isEmptyResult = (output: string): boolean => {
@@ -530,7 +463,6 @@ PARAMETERS IMPORTANTES:
 
     try {
       const { stdout, stderr } = await execAsync(command, { timeout: 30000 });
-
       const combined = stdout + (stderr ? '\n' + stderr : '');
 
       if (isEmptyResult(combined)) {

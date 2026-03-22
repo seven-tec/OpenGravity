@@ -1,20 +1,26 @@
 import { exec } from 'child_process';
 import { promisify } from 'util';
+import { z } from 'zod';
 import type { Tool, ToolDependencies } from '../base.js';
 
 const execAsync = promisify(exec);
 
 const isWindows = process.platform === 'win32';
 
+// 'cd' eliminado porque exec corre en procesos aislados
 const ALLOWED_COMMANDS = isWindows
-  ? new Set(['dir', 'pwd', 'whoami', 'type', 'echo', 'node', 'npm', 'git', 'curl', 'cls', 'cd', 'findstr', 'where', 'gog'])
-  : new Set(['ls', 'pwd', 'whoami', 'date', 'cat', 'echo', 'node', 'npm', 'git', 'curl', 'clear', 'cd', 'find', 'grep', 'head', 'tail']);
+  ? new Set(['dir', 'pwd', 'whoami', 'type', 'echo', 'node', 'npm', 'git', 'curl', 'cls', 'findstr', 'where', 'gog'])
+  : new Set(['ls', 'pwd', 'whoami', 'date', 'cat', 'echo', 'node', 'npm', 'git', 'curl', 'clear', 'find', 'grep', 'head', 'tail']);
 
 const COMMAND_TIMEOUT_MS = 30000;
 
 export default class ExecuteShellTool implements Tool {
   name = 'execute_shell';
-  description = `Execute a safe shell command with whitelisted commands only. Platform: ${isWindows ? 'Windows' : 'Unix/Linux'}.`;
+  description = `Execute a safe shell command with whitelisted commands only. Platform: ${isWindows ? 'Windows' : 'Unix/Linux'}. Note: Context is not preserved between calls (don't use cd).`;
+
+  schema = z.object({
+    command: z.string().min(1, "El comando no puede estar vacío").describe(`Comando a ejecutar (permitidos: ${Array.from(ALLOWED_COMMANDS).join(', ')})`),
+  });
 
   private shellTimeoutMs: number;
 
@@ -26,13 +32,13 @@ export default class ExecuteShellTool implements Tool {
     const allowedList = Array.from(ALLOWED_COMMANDS).join(', ');
     return {
       name: this.name,
-      description: `Execute a safe shell command to inspect the system or project files. Use ONLY if other tools are insufficient. Allowed: ${allowedList}`,
+      description: `Execute a safe shell command to inspect the system or project files. Allowed: ${allowedList}`,
       parameters: {
         type: 'object' as const,
         properties: {
           command: {
             type: 'string' as const,
-            description: `Shell command to execute (allowed: ${allowedList})`,
+            description: `Shell command to execute. Allowed: ${allowedList}`,
           },
         },
         required: ['command'] as string[],
