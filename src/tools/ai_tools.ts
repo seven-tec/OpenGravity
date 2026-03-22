@@ -1,4 +1,3 @@
-import axios from 'axios';
 import type { Tool } from './base.js';
 
 export class ImageGenerationTool implements Tool {
