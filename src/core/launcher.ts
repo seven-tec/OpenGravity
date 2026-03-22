@@ -46,7 +46,13 @@ export class Launcher {
       firestore: this.firestore 
     });
 
-    this.agent = new Agent(this.config, this.db, this.tools, this.firestore, this.obs);
+    // Cortex Pipeline: Initializing middlewares
+    const observabilityMiddleware = new (await import('./middlewares/observability_middleware.js')).ObservabilityMiddleware(this.obs);
+
+    this.agent = new Agent(this.config, this.db, this.tools, this.firestore, this.obs, [
+      observabilityMiddleware
+    ]);
+
     this.audio = new AudioService(this.config);
     this.tts = new TTSInterface(this.config);
 

@@ -5,6 +5,7 @@ import { DatabaseManager } from './database.js';
 import { ToolRegistry } from '../tools/registry.js';
 import { FirestoreService } from '../services/database/firestore.js';
 import { ObservabilityService, type AgentEvent } from '../services/observability.js';
+import type { AgentMiddleware, MiddlewareContext } from './middleware.js';
 
 // AgentEvent is now imported from ../services/observability.js
 
@@ -19,13 +20,15 @@ export class Agent {
   private config: Config;
   private firestore: FirestoreService;
   private obs: ObservabilityService;
+  private middlewares: AgentMiddleware[] = [];
 
-  constructor(config: Config, db: DatabaseManager, tools: ToolRegistry, firestore: FirestoreService, obs: ObservabilityService) {
+  constructor(config: Config, db: DatabaseManager, tools: ToolRegistry, firestore: FirestoreService, obs: ObservabilityService, middlewares: AgentMiddleware[] = []) {
     this.config = config;
     this.db = db;
     this.tools = tools;
     this.firestore = firestore;
     this.obs = obs;
+    this.middlewares = middlewares;
     this.orchestrator = new LLMOrchestrator(config);
     this.orchestrator.registerTools(tools.getDefinitions());
   }
@@ -144,17 +147,37 @@ DISTINCIÓN DE HERRAMIENTAS:
     const traceId = `trace_${Date.now()}`;
     this.emitEvent(userId, 'thought', `Iniciando procesamiento: "${userMessage}"`, traceId);
 
+    const midContext: MiddlewareContext = {
+      userId,
+      traceId,
+      iteration: 0,
+      maxIterations,
+      messages
+    };
+
     let lastToolHash = '';
 
     for (let iteration = 0; iteration < maxIterations; iteration++) {
+      midContext.iteration = iteration;
       console.log(`[Agent] Iteration ${iteration + 1}/${maxIterations}`);
 
       try {
         // En la última iteración, forzamos una respuesta sin herramientas para evitar el timeout
         const isLastIteration = iteration === maxIterations - 1;
+
+        // MIDDLEWARE: preExecute
+        for (const mid of this.middlewares) {
+          if (mid.preExecute) await mid.preExecute(midContext);
+        }
+
         const response = isLastIteration 
           ? await this.orchestrator.generateFinalResponse(messages)
           : await this.orchestrator.generate(messages);
+
+        // MIDDLEWARE: postGenerate
+        for (const mid of this.middlewares) {
+          if (mid.postGenerate) await mid.postGenerate(midContext, response);
+        }
         
         console.log(`[Agent] finish_reason: ${response.finishReason}`);
         console.log(`[Agent] content: "${response.content ?? 'null'}"`);
@@ -194,6 +217,11 @@ DISTINCIÓN DE HERRAMIENTAS:
             
             const result = await this.tools.execute(toolCall.name, toolCall.arguments);
             console.log(`[Agent] Result: ${result.substring(0, 100)}...`);
+
+            // MIDDLEWARE: postToolExecute
+            for (const mid of this.middlewares) {
+              if (mid.postToolExecute) await mid.postToolExecute(midContext, toolCall.name, result);
+            }
 
             this.emitEvent(userId, 'tool_result', { name: toolCall.name, result: result.substring(0, 500) }, traceId);
 
@@ -250,9 +278,14 @@ DISTINCIÓN DE HERRAMIENTAS:
         }
 
       } catch (error) {
-        const err = error as { message?: string; code?: string };
+        const err = error as Error;
         console.error(`[Agent] LLM error:`, err.message);
         
+        // MIDDLEWARE: onError
+        for (const mid of this.middlewares) {
+          if (mid.onError) await mid.onError(midContext, err);
+        }
+
         if (iteration === maxIterations - 1) {
           return `Error: ${err.message?.substring(0, 150) ?? 'Error desconocido'}`;
         }

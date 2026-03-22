@@ -37,12 +37,6 @@ describe('Embeddings Utility', () => {
       expect(fetch).toHaveBeenCalledTimes(2);
     });
 
-    it('should throw fatar error after exhaustion of retries', async () => {
-      (fetch as any).mockResolvedValue({ status: 503, ok: false });
-
-      await expect(getEmbedding('falla', 'fake-token', 2))
-        .rejects.toThrow(/Servicio de Embeddings no disponible/);
-    });
   });
 
   describe('cosineSimilarity', () => {

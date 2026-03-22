@@ -85,9 +85,6 @@ export class FirestoreService {
     if (!this.isInitialized || !this.db) return;
 
     try {
-      // Usamos el ID de usuario para la colección de workouts, 
-      // pero si es Pablo (855084566) lo guardamos en su ruta específica si así se prefiere.
-      // Siguiendo el pedido del usuario: "users/855084566/workouts"
       const docRef = this.db.collection('users').doc(userId).collection('workouts').doc();
       await docRef.set({
         ...workout,
@@ -148,9 +145,34 @@ export class FirestoreService {
     }
   }
 
+  async getErrorTraces(userId: string, limit: number = 10): Promise<any[]> {
+    if (!this.isInitialized || !this.db) return [];
+    try {
+      const snapshot = await this.db
+        .collection('contexts')
+        .doc(userId)
+        .collection('messages')
+        .where('role', '==', 'assistant')
+        .orderBy('createdAt', 'desc')
+        .limit(limit * 2)
+        .get();
+
+      return snapshot.docs
+        .map(doc => ({ id: doc.id, ...doc.data() }))
+        .filter((msg: any) => 
+          msg.content.toLowerCase().includes('error') || 
+          msg.content.toLowerCase().includes('falló') ||
+          (msg.toolCalls && msg.toolCalls.includes('_toolError'))
+        )
+        .slice(0, limit);
+    } catch (error) {
+      this.handleFirestoreError(error);
+      return [];
+    }
+  }
+
   async semanticSearch(userId: string, category: string, query: string, limit: number = 5): Promise<any[]> {
     if (!this.isInitialized || !this.db || !this.hfToken) {
-      // Fallback a búsqueda normal si no hay token o no está inicializado
       return this.queryKnowledge(userId, category, limit);
     }
 
@@ -165,7 +187,6 @@ export class FirestoreService {
         .doc(category)
         .collection('items');
 
-      // Búsqueda vectorial nativa (findNearest) disponible en firebase-admin v12+
       const vectorQuery = collectionRef.findNearest({
         vectorField: 'embedding',
         queryVector: queryVector,
@@ -176,30 +197,24 @@ export class FirestoreService {
       const snapshot = await vectorQuery.get();
       
       if (snapshot.empty) {
-        console.log('[Firestore] Native vector search returned no results (maybe no data with embeddings), trying manual fallback...');
+        console.log('[Firestore] Native vector search returned no results, trying manual fallback...');
         return this.manualSemanticSearchFallback(userId, category, queryVector, limit);
       }
 
-      const results = snapshot.docs.map(doc => ({
+      return snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data(),
-        // Nota: El snapshot de findNearest puede incluir metadatos de distancia si se configuran
       }));
-
-      console.log(`[Firestore] Found ${results.length} native semantic matches`);
-      return results;
 
     } catch (error: any) {
       const isIndexError = error.message.includes('FAILED_PRECONDITION') || error.message.includes('vector index');
       
       if (isIndexError) {
-        console.error('❌ [Firestore] MISSING VECTOR INDEX! Pablo, debes crear el índice vectorial ejecutando:');
-        console.error(`   gcloud firestore indexes composite create --project=opengravity-27ae1 --collection-group=items --query-scope=COLLECTION --field-config=vector-config='{"dimension":"384","flat": "{}"}',field-path=embedding`);
+        console.error('❌ [Firestore] MISSING VECTOR INDEX!');
       } else {
         console.error('[Firestore] Native semantic search failed:', error.message);
       }
       
-      // Fallback automático al método manual anterior
       try {
         const queryVector = await getEmbedding(query, this.hfToken);
         return this.manualSemanticSearchFallback(userId, category, queryVector, limit);
@@ -212,7 +227,6 @@ export class FirestoreService {
   private async manualSemanticSearchFallback(userId: string, category: string, queryVector: number[], limit: number): Promise<any[]> {
     if (!this.db) return [];
     
-    // Traemos los últimos 50 items de esa categoría para comparar en memoria
     const snapshot = await this.db
       .collection('users')
       .doc(userId)
@@ -228,7 +242,6 @@ export class FirestoreService {
       ...doc.data()
     })) as any[];
 
-    // Filtramos los que tienen embedding y calculamos similitud
     return docs
       .filter(doc => doc.embedding && Array.isArray(doc.embedding))
       .map(doc => ({
@@ -238,6 +251,7 @@ export class FirestoreService {
       .sort((a, b) => b.similarity - a.similarity)
       .slice(0, limit);
   }
+  
   async queryKnowledge(userId: string, category: string, limit: number = 5): Promise<any[]> {
     if (!this.isInitialized || !this.db) return [];
 
@@ -262,7 +276,6 @@ export class FirestoreService {
       return [];
     }
   }
-
 
   async clearMessages(userId: string): Promise<void> {
     if (!this.isInitialized || !this.db) return;
