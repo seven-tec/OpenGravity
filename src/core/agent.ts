@@ -4,42 +4,13 @@ import { LLMOrchestrator } from './llm/index.js';
 import { DatabaseManager } from './database.js';
 import { ToolRegistry } from '../tools/registry.js';
 import { FirestoreService } from '../services/database/firestore.js';
+import { ObservabilityService, type AgentEvent } from '../services/observability.js';
 
-export interface AgentEvent {
-  timestamp: string;
-  type: 'thought' | 'tool_call' | 'tool_result' | 'answer' | 'error';
-  userId: string;
-  content: any;
-}
+// AgentEvent is now imported from ../services/observability.js
 
 export class Agent {
-  public static events: AgentEvent[] = [];
-
-  private static addEvent(userId: string, type: AgentEvent['type'], content: any) {
-    Agent.events.push({
-      timestamp: new Date().toISOString(),
-      type,
-      userId,
-      content
-    });
-    if (Agent.events.length > 100) Agent.events.shift();
-  }
-
   private emitEvent(userId: string, type: AgentEvent['type'], content: any, traceId?: string) {
-    const event = {
-      timestamp: new Date().toISOString(),
-      type,
-      userId,
-      content
-    };
-    
-    // Static feed for HUD
-    Agent.addEvent(userId, type, content);
-
-    // Persistence for Observability
-    if (traceId && this.firestore?.initialized) {
-      this.firestore.saveTrace(userId, traceId, event).catch(() => {});
-    }
+    this.obs.emit(userId, type, content, traceId);
   }
 
   private orchestrator: LLMOrchestrator;
@@ -47,12 +18,14 @@ export class Agent {
   private tools: ToolRegistry;
   private config: Config;
   private firestore: FirestoreService;
+  private obs: ObservabilityService;
 
-  constructor(config: Config, db: DatabaseManager, tools: ToolRegistry, firestore: FirestoreService) {
+  constructor(config: Config, db: DatabaseManager, tools: ToolRegistry, firestore: FirestoreService, obs: ObservabilityService) {
     this.config = config;
     this.db = db;
     this.tools = tools;
     this.firestore = firestore;
+    this.obs = obs;
     this.orchestrator = new LLMOrchestrator(config);
     this.orchestrator.registerTools(tools.getDefinitions());
   }
@@ -85,7 +58,7 @@ MISIÓN Y VISIÓN (VERSIÓN 2.0 - ARQUITECTA):
 
 MODO DE OPERACIÓN:
 1. ARQUITECTURA PRIMERO: Ante cualquier problema, analiza patrones (SOLID, Clean Architecture, Hexagonal) antes de proponer código.
-2. CONTEXTO DINÁMICO: Si Pablo menciona un proyecto o término que no conoces (ej: "Novela", "Roberto", "Fitness"), es TU OBLIGACIÓN usar 'manage_personal_knowledge' para buscar el contexto semántico antes de responder.
+2. CONTEXTO DINÁMICO: Si Pablo menciona un proyecto o término que no conoces (ej: "Novela", "Roberto", "Fitness"), es TU OBLIGACIÓN usar 'manage_personal_knowledge' para buscar el contexto semántico. Si no encuentras nada, utiliza 'github_tool' (action: 'list_repositories') para ver si es un proyecto de GitHub o sugiere usar 'sync_projects' para indexar sus repositorios.
 3. INTROSPECCIÓN LOCAL: Tienes la herramienta 'project_analyst'. Úsala para entender la estructura de archivos, leer código y dar auditorías técnicas precisas del repositorio donde estás laburando.
 
 DISTINCIÓN DE HERRAMIENTAS:
@@ -112,7 +85,10 @@ DISTINCIÓN DE HERRAMIENTAS:
    - Acceso a la web en tiempo real. Úsala para noticias, documentación técnica actualizada o datos que cambian constantemente.
 
 7. GITHUB (github_tool):
-   - Acceso a repositorios remotos. Úsala para ver commits, leer código en la nube o gestionar issues.`;
+   - Acceso a repositorios remotos. Úsala para listar repositorios (list_repositories), ver commits, leer código en la nube o gestionar issues. No asumas el nombre del repo; búscalo si es necesario.
+
+8. SYNC (sync_projects):
+   - Sincronización proactiva. Úsala para indexar los metadatos de los proyectos de GitHub en el Omni-Brain. Hazlo si Pablo te lo pide o si notas que te falta contexto sobre sus proyectos remotos.`;
 
     let recentMessages = this.db.getRecentMessages(userId, maxContextMessages);
     

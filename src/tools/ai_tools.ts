@@ -160,9 +160,9 @@ export class GithubTool implements Tool {
   description = 'Accede a repositorios de GitHub.';
 
   schema = z.object({
-    action: z.enum(['read_file', 'list_commits', 'list_issues']).describe('Acción a realizar'),
-    owner: z.string().describe('Propietario del repo'),
-    repo: z.string().describe('Nombre del repositorio'),
+    action: z.enum(['read_file', 'list_commits', 'list_issues', 'list_repositories']).describe('Acción a realizar'),
+    owner: z.string().optional().describe('Propietario del repo (opcional para list_repositories)'),
+    repo: z.string().optional().describe('Nombre del repositorio (opcional para list_repositories)'),
     path: z.string().optional().describe('Ruta del archivo (solo para read_file)'),
   });
 
@@ -179,27 +179,34 @@ export class GithubTool implements Tool {
       parameters: {
         type: 'object' as const,
         properties: {
-          action: { type: 'string', enum: ['read_file', 'list_commits', 'list_issues'], description: 'Acción de GitHub.' },
-          owner: { type: 'string', description: 'Dueño del repositorio.' },
-          repo: { type: 'string', description: 'Nombre del repo.' },
+          action: { type: 'string', enum: ['read_file', 'list_commits', 'list_issues', 'list_repositories'], description: 'Acción de GitHub.' },
+          owner: { type: 'string', description: 'Dueño del repositorio (opcional para listar).' },
+          repo: { type: 'string', description: 'Nombre del repo (opcional para listar).' },
           path: { type: 'string', description: 'Ruta del archivo.' }
         },
-        required: ['action', 'owner', 'repo']
+        required: ['action']
       }
     };
   }
 
   async execute(params: Record<string, unknown>): Promise<string> {
-    const { action, owner, repo, path } = params as { action: string; owner: string; repo: string; path?: string };
+    const { action, owner, repo, path } = params as { action: string; owner?: string; repo?: string; path?: string };
 
     if (!this.token) {
       return JSON.stringify({ success: false, error: 'GITHUB_TOKEN missing', _stopLoop: true });
     }
 
+    if (action !== 'list_repositories' && (!owner || !repo)) {
+      return JSON.stringify({ success: false, error: "Se requiere 'owner' y 'repo' para esta acción.", _stopLoop: true });
+    }
+
     const headers = { 'Authorization': `token ${this.token}`, 'Accept': 'application/vnd.github.v3+json', 'User-Agent': 'OpenGravity-Bot' };
 
     try {
-      let url = `https://api.github.com/repos/${owner}/${repo}`;
+      let url = action === 'list_repositories' 
+        ? 'https://api.github.com/user/repos?sort=updated&per_page=20'
+        : `https://api.github.com/repos/${owner}/${repo}`;
+      
       if (action === 'read_file') url += `/contents/${path}`;
       else if (action === 'list_commits') url += `/commits?per_page=5`;
       else if (action === 'list_issues') url += `/issues?per_page=5`;
@@ -218,7 +225,23 @@ export class GithubTool implements Tool {
         return JSON.stringify({ success: true, commits: data.map((c: any) => ({ sha: c.sha.substring(0, 7), message: c.commit.message })) });
       }
 
-      return JSON.stringify({ success: true, issues: data.map((i: any) => ({ number: i.number, title: i.title })) });
+      if (action === 'list_issues') {
+        return JSON.stringify({ success: true, issues: data.map((i: any) => ({ number: i.number, title: i.title })) });
+      }
+
+      if (action === 'list_repositories') {
+        return JSON.stringify({ 
+          success: true, 
+          repositories: data.map((r: any) => ({ 
+            name: r.name, 
+            full_name: r.full_name, 
+            description: r.description,
+            private: r.private
+          })) 
+        });
+      }
+
+      return JSON.stringify({ success: true, data });
 
     } catch (error) {
       return JSON.stringify({ success: false, error: (error as Error).message, _stopLoop: true });

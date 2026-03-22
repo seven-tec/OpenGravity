@@ -12,6 +12,7 @@ import { FirestoreService } from './services/database/firestore.js';
 import { AudioService } from './services/audio/audio_service.js';
 import { TTSInterface } from './services/audio/tts_interface.js';
 import { DASHBOARD_HTML } from './utils/dashboard_html.js';
+import { ObservabilityService } from './services/observability.js';
 
 // Override system DNS if needed
 try {
@@ -25,7 +26,7 @@ config(); // Changed from dotenv();
 
 const PORT = parseInt(process.env.PORT || '7860', 10);
 
-function createHealthCheckServer(): http.Server {
+function createHealthCheckServer(obs: ObservabilityService): http.Server {
   const server = http.createServer((req: http.IncomingMessage, res: http.ServerResponse) => {
     if (req.url === '/health') {
       res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -34,13 +35,13 @@ function createHealthCheckServer(): http.Server {
         timestamp: new Date().toISOString(),
         service: 'opengravity'
       }));
-    } else if (req.url === '/api/status') {
+    } else if (req.url === '/api/status' && obs) {
       res.writeHead(200, { 
         'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*' // Para dev local si hace falta
+        'Access-Control-Allow-Origin': '*'
       });
       res.end(JSON.stringify({ 
-        events: Agent.events 
+        events: obs.getEvents() 
       }));
     } else if (req.url === '/dashboard' || req.url === '/') {
       res.writeHead(200, { 'Content-Type': 'text/html' });
@@ -85,13 +86,14 @@ async function main() {
   console.log(`[Database] Initialized at ${config.database.dbPath}`);
 
   const firestore = new FirestoreService('service-account.json', config.vision.hfToken);
+  const obs = new ObservabilityService(firestore);
 
   const tools = new ToolRegistry();
   await db.initialize();
   await tools.initialize({ config, db, firestore });
   console.log(`[Tools] ${tools.names.length} tools registered`);
 
-  const agent = new Agent(config, db, tools, firestore);
+  const agent = new Agent(config, db, tools, firestore, obs);
 
   const audio = new AudioService(config);
   const tts = new TTSInterface(config);
@@ -99,7 +101,7 @@ async function main() {
   const bot = await createBot(config, agent, db, audio, tts);
   console.log('[Bot] Ready - Starting long polling...');
 
-  const healthServer = createHealthCheckServer();
+  const healthServer = createHealthCheckServer(obs);
   healthServer.listen(PORT, '0.0.0.0', () => {
     console.log(`[Health] Server running on port ${PORT}`);
   });
