@@ -75,7 +75,7 @@ async function main() {
   const db = new DatabaseManager(config.database.dbPath);
   console.log(`[Database] Initialized at ${config.database.dbPath}`);
 
-  const firestore = new FirestoreService('service-account.json');
+  const firestore = new FirestoreService('service-account.json', config.vision.hfToken);
 
   const tools = new ToolRegistry();
   await db.initialize();

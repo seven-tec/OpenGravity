@@ -66,7 +66,8 @@ NO USES ESTA HERRAMIENTA PARA:
 
     try {
       if (action === 'query') {
-        const results = await (firestore as any).queryKnowledge(targetUserId, category, 5);
+        const queryText = data?.content || data?.query || category; // Priorizamos contenido del query si existe
+        const results = await (firestore as any).semanticSearch(targetUserId, category, queryText, 5);
         if (results.length === 0) {
           return `No encontré nada guardado recientemente en la categoría '${category}'.`;
         }

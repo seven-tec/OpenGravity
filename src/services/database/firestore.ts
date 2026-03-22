@@ -1,12 +1,15 @@
 import admin from 'firebase-admin';
 import { existsSync, readFileSync } from 'fs';
 import { join } from 'path';
+import { getEmbedding, cosineSimilarity } from '../../utils/embeddings.js';
 
 export class FirestoreService {
   private db: admin.firestore.Firestore | null = null;
   private isInitialized = false;
+  private hfToken?: string;
 
-  constructor(serviceAccountPath?: string) {
+  constructor(serviceAccountPath?: string, hfToken?: string) {
+    this.hfToken = hfToken;
     try {
       let serviceAccount: object | null = null;
 
@@ -100,16 +103,74 @@ export class FirestoreService {
 
     try {
       if (action === "store" || action === "update") {
-        // Estructura: users/{userId}/knowledge/{category}/items/{docId}
+        let embedding: number[] | null = null;
+        
+        if (this.hfToken) {
+          try {
+            const textToEmbed = typeof data === 'string' ? data : (data.content || JSON.stringify(data));
+            embedding = await getEmbedding(textToEmbed, this.hfToken);
+            console.log(`[Firestore] Embedding generated for category: ${category}`);
+          } catch (e) {
+            console.warn('[Firestore] Failed to generate embedding, saving without it:', e);
+          }
+        }
+
         const collectionRef = this.db.collection('users').doc(userId).collection('knowledge').doc(category).collection('items');
         await collectionRef.add({
           ...data,
+          embedding: embedding,
           createdAt: admin.firestore.FieldValue.serverTimestamp(),
           metadata: { source: 'OpenGravity_Agent' }
         });
       }
     } catch (error) {
       this.handleFirestoreError(error);
+    }
+  }
+
+  async semanticSearch(userId: string, category: string, query: string, limit: number = 5): Promise<any[]> {
+    if (!this.isInitialized || !this.db || !this.hfToken) {
+      // Fallback a búsqueda normal si no hay token o no está inicializado
+      return this.queryKnowledge(userId, category, limit);
+    }
+
+    try {
+      console.log(`[Firestore] Starting semantic search in ${category} for: "${query}"`);
+      const queryVector = await getEmbedding(query, this.hfToken);
+      
+      // Traemos los últimos 50 items de esa categoría para comparar en memoria
+      // (Para un asistente personal es más que suficiente y ahorra costos de índices vectoriales)
+      const snapshot = await this.db
+        .collection('users')
+        .doc(userId)
+        .collection('knowledge')
+        .doc(category)
+        .collection('items')
+        .orderBy('createdAt', 'desc')
+        .limit(50)
+        .get();
+
+      const docs = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as any[];
+
+      // Filtramos los que tienen embedding y calculamos similitud
+      const results = docs
+        .filter(doc => doc.embedding && Array.isArray(doc.embedding))
+        .map(doc => ({
+          ...doc,
+          similarity: cosineSimilarity(queryVector, doc.embedding)
+        }))
+        .sort((a, b) => b.similarity - a.similarity)
+        .slice(0, limit);
+
+      console.log(`[Firestore] Found ${results.length} semantic matches`);
+      return results;
+
+    } catch (error) {
+      console.error('[Firestore] Semantic search failed:', error);
+      return this.queryKnowledge(userId, category, limit);
     }
   }
   async queryKnowledge(userId: string, category: string, limit: number = 5): Promise<any[]> {
