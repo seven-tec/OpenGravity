@@ -59,13 +59,31 @@ export default class AutoDiagnosticTool implements Tool {
       message: this.deps.firestore?.initialized ? 'Conectado a Firebase Cloud Firestore.' : '⚠️ Firestore no inicializado o en modo offline.'
     });
 
-    // 4. Check HF Connectivity (if full)
+    // 4. Check GitHub Auth
+    const ghToken = process.env.GITHUB_TOKEN;
+    const ghUser = process.env.GITHUB_USERNAME;
+    if (ghToken) {
+      health.checks.push({ 
+        name: 'GitHub API', 
+        status: (ghUser && ghUser !== '$GITHUB_USERNAME') ? 'OK' : 'WARN', 
+        message: (ghUser && ghUser !== '$GITHUB_USERNAME') ? `Autenticado como ${ghUser}.` : '⚠️ GITHUB_TOKEN presente pero GITHUB_USERNAME falta o es placeholder.'
+      });
+    } else {
+      health.checks.push({ name: 'GitHub API', status: 'FAIL', message: 'Falta GITHUB_TOKEN. Las herramientas de GitHub no funcionarán.' });
+    }
+
+    // 5. Check HF Connectivity (if full)
     if (full && process.env.HUGGINGFACE_TOKEN) {
       try {
         await getEmbedding('test', process.env.HUGGINGFACE_TOKEN, 1);
         health.checks.push({ name: 'Hugging Face API', status: 'OK', message: 'Conectividad verificada y latencia aceptable.' });
       } catch (e: any) {
-        health.checks.push({ name: 'Hugging Face API', status: 'FAIL', message: `No se pudo conectar: ${e.message}` });
+        const isIndexError = e.message.includes('FAILED_PRECONDITION') || e.message.includes('index');
+        health.checks.push({ 
+          name: 'Hugging Face / Firestore Index', 
+          status: 'FAIL', 
+          message: isIndexError ? '❌ FALTA ÍNDICE VECTORIAL EN FIRESTORE. Corre el comando gcloud provisto.' : `No se pudo conectar: ${e.message}` 
+        });
       }
     }
 
@@ -73,8 +91,9 @@ export default class AutoDiagnosticTool implements Tool {
     
     return JSON.stringify({
       success: allOk,
-      summary: allOk ? "SISTEMAS OPERATIVOS. Jarvis está al 100%." : "ADVERTENCIA: Algunos sistemas reportan fallos o advertencias.",
+      summary: allOk ? "SISTEMAS OPERATIVOS. Jarvis está al 100%." : "ADVERTENCIA: Algunos sistemas reportan fallos cruciales.",
       health,
+      remediation: !allOk ? "Revisa los mensajes de FALLO arriba para las instrucciones de corrección." : undefined,
       _stopLoop: true // Detener el loop después del diagnóstico
     });
   }

@@ -196,8 +196,20 @@ export class GithubTool implements Tool {
       return JSON.stringify({ success: false, error: 'GITHUB_TOKEN missing', _stopLoop: true });
     }
 
-    if (action !== 'list_repositories' && (!owner || !repo)) {
-      return JSON.stringify({ success: false, error: "Se requiere 'owner' y 'repo' para esta acción.", _stopLoop: true });
+    let finalOwner = owner || process.env.GITHUB_USERNAME;
+    let finalRepo = repo || 'OpenGravity';
+
+    // Validar placeholders de variables que no fueron reemplazadas en el despliegue
+    if (finalOwner === '$GITHUB_USERNAME' || finalOwner === 'tu_usuario' || !finalOwner) {
+      return JSON.stringify({ 
+        success: false, 
+        error: "CONFIGURACIÓN INCOMPLETA: Faltan 'owner' o GITHUB_USERNAME en el sistema.", 
+        _stopLoop: true 
+      });
+    }
+
+    if (finalRepo === 'opengravity' || finalRepo === 'OpenGravity') {
+      // Normalizar para evitar fallos tontos si el usuario pasa el nombre en otro formato
     }
 
     const headers = { 'Authorization': `token ${this.token}`, 'Accept': 'application/vnd.github.v3+json', 'User-Agent': 'OpenGravity-Bot' };
@@ -205,13 +217,22 @@ export class GithubTool implements Tool {
     try {
       let url = action === 'list_repositories' 
         ? 'https://api.github.com/user/repos?sort=updated&per_page=20'
-        : `https://api.github.com/repos/${owner}/${repo}`;
+        : `https://api.github.com/repos/${finalOwner}/${finalRepo}`;
       
       if (action === 'read_file') url += `/contents/${path}`;
       else if (action === 'list_commits') url += `/commits?per_page=5`;
       else if (action === 'list_issues') url += `/issues?per_page=5`;
 
       const response = await fetch(url, { headers });
+      
+      if (response.status === 404) {
+        return JSON.stringify({ 
+          success: false, 
+          error: `Error 404: No se encontró ${action === 'read_file' ? `el archivo '${path}' en ` : ''}el repositorio ${finalOwner}/${finalRepo}. Verifica que el nombre sea correcto y que el token tenga acceso.`,
+          _stopLoop: true 
+        });
+      }
+
       if (!response.ok) throw new Error(`GitHub Error: ${response.status}`);
 
       const data = await response.json() as any;

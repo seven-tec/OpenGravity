@@ -190,7 +190,15 @@ export class FirestoreService {
       return results;
 
     } catch (error: any) {
-      console.error('[Firestore] Native semantic search failed (likely missing index or SDK version issue):', error.message);
+      const isIndexError = error.message.includes('FAILED_PRECONDITION') || error.message.includes('vector index');
+      
+      if (isIndexError) {
+        console.error('❌ [Firestore] MISSING VECTOR INDEX! Pablo, debes crear el índice vectorial ejecutando:');
+        console.error(`   gcloud firestore indexes composite create --project=opengravity-27ae1 --collection-group=items --query-scope=COLLECTION --field-config=vector-config='{"dimension":"384","flat": "{}"}',field-path=embedding`);
+      } else {
+        console.error('[Firestore] Native semantic search failed:', error.message);
+      }
+      
       // Fallback automático al método manual anterior
       try {
         const queryVector = await getEmbedding(query, this.hfToken);
