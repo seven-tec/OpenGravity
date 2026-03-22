@@ -40,12 +40,31 @@ export class GoogleWorkspaceTool implements Tool {
     const action = params.action as string;
     const args = (params.args as string) || '';
 
-    // Mapeo simple de acciones a comandos de gog
     const command = `gog ${action} ${args}`;
+
+    const isEmptyResult = (output: string): boolean => {
+      const normalized = (output || '').trim().toLowerCase();
+      return normalized === 'no events' || 
+             normalized === 'no results' ||
+             normalized.startsWith('no events\n') ||
+             normalized.startsWith('no results\n') ||
+             normalized.includes('no events found') ||
+             normalized.includes('no results found');
+    };
 
     try {
       const { stdout, stderr } = await execAsync(command, { timeout: 30000 });
       
+      const combined = stdout + (stderr ? '\n' + stderr : '');
+      
+      if (isEmptyResult(combined)) {
+        return JSON.stringify({
+          success: true,
+          output: combined.trim(),
+          note: 'Empty result from gogcli'
+        });
+      }
+
       if (stderr && !stdout) {
         return JSON.stringify({ success: false, error: stderr });
       }
@@ -57,6 +76,16 @@ export class GoogleWorkspaceTool implements Tool {
       });
     } catch (error) {
       const err = error as any;
+      const errOutput = (err.stdout || '') + '\n' + (err.stderr || '');
+      
+      if (isEmptyResult(errOutput)) {
+        return JSON.stringify({
+          success: true,
+          output: errOutput.trim(),
+          note: 'Empty result from gogcli (caught as exception)'
+        });
+      }
+
       return JSON.stringify({
         success: false,
         error: err.message,

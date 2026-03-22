@@ -1,0 +1,40 @@
+app: opengravity
+
+services:
+  - name: bot
+    github:
+      repository: github.com/seven-tec/OpenGravity
+      branch: main
+    builder: docker
+    dockerfile_path: ./Dockerfile
+    instance_type: micro
+    regions:
+      - fra
+    ports:
+      - port: 7860
+        protocol: http
+    routes:
+      - path: /
+        port: 7860
+    health_checks:
+      - path: /health
+        port: 7860
+        interval: 30s
+        timeout: 10s
+    env:
+      - name: PORT
+        value: "7860"
+      - name: NODE_ENV
+        value: production
+      - name: TELEGRAM_BOT_TOKEN
+        value: ${TELEGRAM_BOT_TOKEN}
+      - name: TELEGRAM_ALLOWED_USER_IDS
+        value: ${TELEGRAM_ALLOWED_USER_IDS}
+      - name: GROQ_API_KEY
+        value: ${GROQ_API_KEY}
+      - name: ELEVENLABS_API_KEY
+        value: ${ELEVENLABS_API_KEY}
+      - name: ELEVENLABS_VOICE_ID
+        value: ${ELEVENLABS_VOICE_ID}
+      - name: GOG_CREDENTIALS
+        value: ${GOG_CREDENTIALS}

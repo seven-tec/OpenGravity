@@ -46,7 +46,18 @@ Common commands
 - Calendar list events: `gog calendar events <calendarId> --from <iso> --to <iso>`
 - Calendar create event: `gog calendar create <calendarId> --summary "Title" --from <iso> --to <iso>`
 - Calendar create with color: `gog calendar create <calendarId> --summary "Title" --from <iso> --to <iso> --event-color 7`
-- Calendar update event: `gog calendar update <calendarId> <eventId> --summary "New Title" --event-color 4`
+- Calendar update event: `gog calendar update <calendarId> <eventId> -- Buscar correos: `gog gmail search "label:inbox is:unread" --max 5`
+- Listar calendario: `gog calendar list`
+- Ver archivos de Drive: `gog drive search "name contains 'OpenGravity'"`
+- Leer un documento: `gog docs get <id>`
+
+**IMPORTANTE**: Para buscar en Gmail, NO uses flags como `--label` o `--unread`. Usa una única "query string" entre comillas siguiendo la sintaxis oficial de Gmail (ej: "label:inbox is:unread").
+st --max 20`
+- Sheets get: `gog sheets get <sheetId> "Tab!A1:D10" --json`
+- Sheets update: `gog sheets update <sheetId> "Tab!A1:B2" --values-json '[["A","B"],["1","2"]]' --input USER_ENTERED`
+- Sheets append: `gog sheets append <sheetId> "Tab!A:C" --values-json '[["x","y","z"]]' --insert INSERT_ROWS`
+- Sheets clear: `gog sheets clear <sheetId> "Tab!A2:Z"`
+- Sheets metadata: `gog sheets metadata <sheetId> --json`
 - Calendar show colors: `gog calendar colors`
 - Drive search: `gog drive search "query" --max 10`
 - Contacts: `gog contacts list --max 20`
