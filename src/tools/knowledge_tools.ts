@@ -9,7 +9,26 @@ export function setFirestore(service: FirestoreService) {
 
 export class ManagePersonalKnowledgeTool implements Tool {
   name = 'manage_personal_knowledge';
-  description = 'Guarda, clasifica o actualiza información en el cerebro de largo plazo de Pablo.';
+  description = `Base de conocimiento personal de Pablo (almacenado en Firestore).
+
+USA ESTA HERRAMIENTA PARA:
+- Guardar información que quieres RECORDAR después (recuerdos, deudas, preferencias)
+- Clasificar notas y aprendizajes por categoría (fitness, finanzas, novela, logística, etc.)
+- Consultar información guardada anteriormente
+- Actualizar entradas existentes
+
+EJEMPLOS DE USO:
+- "guarda que Roberto me debe $50 de la cena" → action: store, category: deudas
+- "recuerda que mi hipertrofia es de 3x10" → action: store, category: fitness  
+- "qué ejercicios hice la semana pasada?" → action: query, category: fitness
+- "actualiza mi peso en hipertrofia a 90kg" → action: update, category: fitness
+
+NO USES ESTA HERRAMIENTA PARA:
+- Crear eventos de calendario o reuniones
+- Gestionar emails de Gmail
+- Buscar archivos en Google Drive
+- Cualquier cosa relacionada con Google Workspace
+- Para eso, usa 'google_workspace'`;
 
   getDefinition() {
     return {
