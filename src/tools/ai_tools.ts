@@ -37,8 +37,8 @@ export class ImageGenerationTool implements Tool {
     // Un seed aleatorio obliga a Pollinations a generar una imagen nueva cada vez
     const seed = Math.floor(Math.random() * 1000000);
     
-    // Construimos la URL de Pollinations. Renderizará la imagen on-the-fly.
-    const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=${width}&height=${height}&seed=${seed}&nologo=true`;
+    // Construimos la URL de Pollinations. Usamos la ruta estable /p/ que provee OpenGraph para Telegram
+    const imageUrl = `https://pollinations.ai/p/${encodeURIComponent(prompt)}?width=${width}&height=${height}&seed=${seed}&nologo=true`;
 
     console.log(`[ImageGeneration] Generating free image with Pollinations: "${prompt}"`);
 
