@@ -33,6 +33,9 @@ export const ConfigSchema = z.object({
   research: z.object({
     tavilyApiKey: z.string().optional(),
   }),
+  dev: z.object({
+    githubToken: z.string().optional(),
+  }),
   shell: z.object({
     timeoutMs: z.number().int().positive().default(30000),
   }),
@@ -59,6 +62,7 @@ export interface EnvSchema {
   OPENAI_API_KEY?: string;
   HF_TOKEN?: string;
   TAVILY_API_KEY?: string;
+  GITHUB_TOKEN?: string;
 }
 
 export function parseConfig(env: EnvSchema): Config {
@@ -96,6 +100,9 @@ export function parseConfig(env: EnvSchema): Config {
     },
     research: {
       tavilyApiKey: env.TAVILY_API_KEY,
+    },
+    dev: {
+      githubToken: env.GITHUB_TOKEN,
     },
     shell: {
       timeoutMs: parseInt(env.SHELL_TIMEOUT_MS ?? '30000', 10),

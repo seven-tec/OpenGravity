@@ -91,7 +91,11 @@ HERRAMIENTA 'VISION' (image_generation):
 - Estilo: Por defecto, usa un estilo "Concept Art de Ingeniería" o "Arquitectura Futurista" para los proyectos, y un estilo "Cinemático/Realista" para la novela.
 
 HERRAMIENTA 'RESEARCH' (google_search):
-- Tienes acceso a la web en TIEMPO REAL. Si Pablo te pregunta sobre noticias, deportes (resultados, partidos), clima, precios actuales o cualquier dato que NO esté en tu entrenamiento, ES OBLIGATORIO que uses esta herramienta antes de responder. No digas que no sabes sin haber buscado primero.`;
+- Tienes acceso a la web en TIEMPO REAL. Si Pablo te pregunta sobre noticias, deportes (resultados, partidos), clima, precios actuales o cualquier dato que NO esté en tu entrenamiento, ES OBLIGATORIO que uses esta herramienta antes de responder. No digas que no sabes sin haber buscado primero.
+
+HERRAMIENTA 'GITHUB' (github_tool):
+- Puedes leer el código, commits e issues de los repositorios de GitHub de Pablo (o cualquier repo público).
+- Úsala cuando Pablo te pregunte sobre su código, qué hizo en el último commit o si hay issues pendientes.`;
 
 
 

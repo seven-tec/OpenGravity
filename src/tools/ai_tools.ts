@@ -189,3 +189,131 @@ export class GoogleSearchTool implements Tool {
     }
   }
 }
+
+export class GithubTool implements Tool {
+  name = 'github_tool';
+  description = 'Accede a repositorios de GitHub. Permite leer archivos, ver commits o issues. Úsala para analizar código de Pablo.';
+
+  private token?: string;
+
+  constructor(token?: string) {
+    this.token = token;
+  }
+
+  getDefinition() {
+    return {
+      name: this.name,
+      description: this.description,
+      parameters: {
+        type: 'object' as const,
+        properties: {
+          action: {
+            type: 'string',
+            enum: ['read_file', 'list_commits', 'list_issues'],
+            description: 'Acción a realizar.'
+          },
+          owner: {
+            type: 'string',
+            description: 'Propietario del repo (ej: seven-tec).'
+          },
+          repo: {
+            type: 'string',
+            description: 'Nombre del repositorio (ej: OpenGravity).'
+          },
+          path: {
+            type: 'string',
+            description: 'Ruta del archivo (solo para read_file).'
+          }
+        },
+        required: ['action', 'owner', 'repo']
+      }
+    };
+  }
+
+  async execute(params: Record<string, unknown>): Promise<string> {
+    const { action, owner, repo, path } = params as any;
+
+    if (!this.token) {
+      console.log(`[GithubTool] Failed: GITHUB_TOKEN is missing`);
+      return JSON.stringify({
+        success: false,
+        error: 'Falta GITHUB_TOKEN en el .env. Pablo tiene que configurarlo para leer repos privados.',
+        _stopLoop: true
+      });
+    }
+
+    const headers: Record<string, string> = {
+      'Authorization': `token ${this.token}`,
+      'Accept': 'application/vnd.github.v3+json',
+      'User-Agent': 'OpenGravity-Bot'
+    };
+
+    try {
+      let url = `https://api.github.com/repos/${owner}/${repo}`;
+      
+      if (action === 'read_file') {
+        url += `/contents/${path}`;
+        console.log(`[GithubTool] Reading file: ${owner}/${repo}/${path}`);
+      } else if (action === 'list_commits') {
+        url += `/commits?per_page=5`;
+        console.log(`[GithubTool] Listing commits: ${owner}/${repo}`);
+      } else if (action === 'list_issues') {
+        url += `/issues?per_page=5`;
+        console.log(`[GithubTool] Listing issues: ${owner}/${repo}`);
+      }
+
+      const response = await fetch(url, { headers });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`GitHub API Error: ${response.status} - ${errorText}`);
+      }
+
+      const data = await response.json() as any;
+
+      if (action === 'read_file') {
+        if (data.encoding === 'base64') {
+          const content = Buffer.from(data.content, 'base64').toString('utf-8');
+          const isTooLarge = content.length > 5000;
+          return JSON.stringify({ 
+            success: true, 
+            path, 
+            content: isTooLarge ? content.substring(0, 5000) + '... (RECORTADO por tamaño)' : content 
+          });
+        }
+        return JSON.stringify({ success: true, path, data });
+      }
+
+      if (action === 'list_commits') {
+        const commits = data.map((c: any) => ({
+          sha: c.sha.substring(0, 7),
+          author: c.commit.author.name,
+          message: c.commit.message,
+          date: c.commit.author.date
+        }));
+        return JSON.stringify({ success: true, commits });
+      }
+
+      if (action === 'list_issues') {
+        const issues = data.map((i: any) => ({
+          number: i.number,
+          title: i.title,
+          state: i.state,
+          user: i.user.login
+        }));
+        return JSON.stringify({ success: true, issues });
+      }
+
+      return JSON.stringify({ success: false, error: 'Acción no soportada' });
+
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      console.error(`[GithubTool] Error: ${msg}`);
+      return JSON.stringify({
+        success: false,
+        error: `Error en GitHub: ${msg}`,
+        _stopLoop: true
+      });
+    }
+  }
+}

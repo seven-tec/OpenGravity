@@ -1,7 +1,7 @@
 import type { Tool } from './base.js';
 import { GetCurrentTimeTool, GetRecentMessagesTool, ExecuteShellTool, setDatabase } from './system_tools.js';
 import { ManagePersonalKnowledgeTool, setFirestore } from './knowledge_tools.js';
-import { ImageGenerationTool, GoogleSearchTool } from './ai_tools.js';
+import { ImageGenerationTool, GoogleSearchTool, GithubTool } from './ai_tools.js';
 import { GoogleWorkspaceTool } from './google_tools.js';
 import type { Config } from '../config.js';
 import type { DatabaseManager } from '../core/database.js';
@@ -20,6 +20,7 @@ export class ToolRegistry {
     this.register(new ManagePersonalKnowledgeTool());
     this.register(new ImageGenerationTool(config.vision.hfToken));
     this.register(new GoogleSearchTool(config.research.tavilyApiKey));
+    this.register(new GithubTool(config.dev.githubToken));
     this.register(new GoogleWorkspaceTool());
 
     if (db) {
