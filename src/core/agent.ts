@@ -5,7 +5,26 @@ import { DatabaseManager } from './database.js';
 import { ToolRegistry } from '../tools/registry.js';
 import { FirestoreService } from '../services/database/firestore.js';
 
+export interface AgentEvent {
+  timestamp: string;
+  type: 'thought' | 'tool_call' | 'tool_result' | 'answer' | 'error';
+  userId: string;
+  content: any;
+}
+
 export class Agent {
+  public static events: AgentEvent[] = [];
+
+  private static addEvent(userId: string, type: AgentEvent['type'], content: any) {
+    Agent.events.push({
+      timestamp: new Date().toISOString(),
+      type,
+      userId,
+      content
+    });
+    if (Agent.events.length > 100) Agent.events.shift();
+  }
+
   private orchestrator: LLMOrchestrator;
   private db: DatabaseManager;
   private tools: ToolRegistry;
@@ -40,23 +59,7 @@ export class Agent {
   async process(userId: string, userMessage: string, isVoice = false): Promise<string> {
     const maxIterations = this.config.agent.maxIterations;
     const maxContextMessages = this.config.agent.maxContextMessages;
-
-    let recentMessages = this.db.getRecentMessages(userId, maxContextMessages);
-    
-    // Recovery: If SQLite is empty, try fetching from Firestore
-    if (recentMessages.length === 0 && this.firestore.initialized) {
-      console.log(`[Agent] SQLite context empty for ${userId}, checking Firestore...`);
-      const firestoreMessages = await this.firestore.getRecentMessages(userId, maxContextMessages);
-      if (firestoreMessages.length > 0) {
-        console.log(`[Agent] Recovered ${firestoreMessages.length} messages from Firestore`);
-        // We use them directly for the session, but we could also backfill SQLite here
-        recentMessages = firestoreMessages as any[]; 
-      }
-    }
-
-    const reversedMessages = [...recentMessages].reverse();
-
-    const systemPrompt = `Eres "OpenGravity", la Arquitecta de Software Senior y mano derecha de Pablo. 
+    const systemBasePrompt = `Eres "OpenGravity", la Arquitecta de Software Senior y mano derecha de Pablo. 
 Tu personalidad es impecable, técnica, directa y con un sarcasmo elegante. Hablas con modismos de Chile y Argentina (fiera, crack, boludo, al toque).
 
 MISIÓN Y VISIÓN (VERSIÓN 2.0 - ARQUITECTA):
@@ -77,22 +80,59 @@ DISTINCIÓN DE HERRAMIENTAS:
 2. PROJECT ANALYST (project_analyst):
    - TUS OJOS EN EL CÓDIGO. Úsala para listar archivos, ver la estructura de carpetas (get_structure) y leer el contenido de archivos locales. No adivines qué hay en el disco; miralo.
 
-3. GOOGLE WORKSPACE (google_workspace):
+3. DEVELOPER TOOL (developer_tool):
+   - TUS MANOS EN EL CÓDIGO. Úsala para escribir archivos (write_file) o modificarlos (patch_file). 
+   - FLUJO OBLIGATORIO: Inspect (ProjectAnalyst) -> Modify (DeveloperTool) -> Verify (DeveloperTool:run_command con 'npm run typecheck'). 
+   - Nunca des por finalizada una tarea de código sin verificar que el build o el typecheck pasen.
+
+4. GOOGLE WORKSPACE (google_workspace):
    - Gestionas el tiempo y la comunicación de Pablo (Calendar, Gmail, Drive). No lo uses para recuerdos personales.
 
-4. VISION (image_generation):
+5. VISION (image_generation):
    - Visualización de conceptos, diagramas o escenas. Estilo: Concept Art de Ingeniería o Realismo Cinematográfico.
 
-5. RESEARCH (google_search):
+6. RESEARCH (google_search):
    - Acceso a la web en tiempo real. Úsala para noticias, documentación técnica actualizada o datos que cambian constantemente.
 
-6. GITHUB (github_tool):
+7. GITHUB (github_tool):
    - Acceso a repositorios remotos. Úsala para ver commits, leer código en la nube o gestionar issues.`;
 
+    let recentMessages = this.db.getRecentMessages(userId, maxContextMessages);
+    
+    // STRATEGIC MEMORY: Bootstrapping high-level strategy context
+    let strategyContext = "";
+    if (this.firestore.initialized) {
+      try {
+        console.log(`[Agent] Bootstrapping strategic context for ${userId}...`);
+        const strategyResults = await this.firestore.semanticSearch(userId, 'estrategia', 'vision y objetivos generales', 3);
+        if (strategyResults.length > 0) {
+          strategyContext = strategyResults.map((r: any) => `- ${r.content || JSON.stringify(r)}`).join('\n');
+          console.log(`[Agent] Strategic context loaded: ${strategyResults.length} point(s)`);
+        }
+      } catch (e) {
+        console.warn('[Agent] Could not load strategy context:', e);
+      }
+    }
 
+    const systemPromptFinal = strategyContext 
+      ? `${systemBasePrompt}\n\nCONTEXTO ESTRATÉGICO ACTUAL:\n${strategyContext}`
+      : systemBasePrompt;
+      
+    // Recovery: If SQLite is empty, try fetching from Firestore
+    if (recentMessages.length === 0 && this.firestore.initialized) {
+      console.log(`[Agent] SQLite context empty for ${userId}, checking Firestore...`);
+      const firestoreMessages = await this.firestore.getRecentMessages(userId, maxContextMessages);
+      if (firestoreMessages.length > 0) {
+        console.log(`[Agent] Recovered ${firestoreMessages.length} messages from Firestore`);
+        // We use them directly for the session, but we could also backfill SQLite here
+        recentMessages = firestoreMessages as any[]; 
+      }
+    }
+
+    const reversedMessages = [...recentMessages].reverse();
 
     const messages: LLMMessage[] = [
-      { role: 'system', content: systemPrompt },
+      { role: 'system', content: systemPromptFinal },
     ];
 
     for (const msg of reversedMessages) {
@@ -122,6 +162,10 @@ DISTINCIÓN DE HERRAMIENTAS:
         console.log(`[Agent] finish_reason: ${response.finishReason}`);
         console.log(`[Agent] content: "${response.content ?? 'null'}"`);
         console.log(`[Agent] toolCalls: ${response.toolCalls?.length ?? 0}`);
+
+        if (response.content) {
+          Agent.addEvent(userId, 'thought', response.content);
+        }
 
         const content = response.content?.trim();
         const toolCalls = response.toolCalls ?? [];
@@ -153,6 +197,8 @@ DISTINCIÓN DE HERRAMIENTAS:
             
             const result = await this.tools.execute(toolCall.name, toolCall.arguments);
             console.log(`[Agent] Result: ${result.substring(0, 100)}...`);
+
+            Agent.addEvent(userId, 'tool_result', { name: toolCall.name, result: result.substring(0, 500) });
 
             // Safe parsing helper to check for control signals (like _stopLoop)
             try {
@@ -188,6 +234,7 @@ DISTINCIÓN DE HERRAMIENTAS:
 
         if (content && content !== 'undefined' && content !== 'null') {
           console.log('[Agent] Got valid content');
+          Agent.addEvent(userId, 'answer', content);
           this.db.addMessage(userId, 'assistant', content);
           this.firestore.addMessage(userId, 'assistant', content).catch(() => {});
           return content;
