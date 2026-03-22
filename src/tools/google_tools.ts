@@ -6,8 +6,8 @@ const execAsync = promisify(exec);
 
 interface CalendarEventsParams {
   calendarId?: string;
-  timeMin?: string;
-  timeMax?: string;
+  startDate?: string;
+  endDate?: string;
   maxResults?: number;
 }
 
@@ -110,9 +110,9 @@ PARAMETERS IMPORTANTES:
 
   private buildCalendarEventsCommand(params: CalendarEventsParams): string {
     const parts = ['gog', 'calendar', 'events'];
-    if (params.calendarId) parts.push(`--calendarId=${this.escapeShellValue(params.calendarId)}`);
-    if (params.timeMin) parts.push(`--timeMin=${this.escapeShellValue(params.timeMin)}`);
-    if (params.timeMax) parts.push(`--timeMax=${this.escapeShellValue(params.timeMax)}`);
+    if (params.calendarId) parts.push(`--cal=${this.escapeShellValue(params.calendarId)}`);
+    if (params.startDate) parts.push(`--from=${this.escapeShellValue(params.startDate)}`);
+    if (params.endDate) parts.push(`--to=${this.escapeShellValue(params.endDate)}`);
     if (params.maxResults) parts.push(`--max=${params.maxResults}`);
     return parts.join(' ');
   }
@@ -243,13 +243,13 @@ PARAMETERS IMPORTANTES:
             type: 'string' as const,
             description: 'ID del calendario de Google (opcional, usa "primary" por defecto)'
           },
-          timeMin: {
+          startDate: {
             type: 'string' as const,
-            description: 'Fecha/hora de inicio para filtrar eventos. Formato ISO 8601: "2024-03-20T00:00:00"'
+            description: 'Fecha de INICIO para filtrar eventos del calendario. NO uses timeMin ni --start. Formato: fecha simple (2024-03-20), RFC3339 (2024-03-20T00:00:00), o relativa (today, tomorrow, monday). EJEMPLOS: "2024-03-20", "today", "tomorrow"'
           },
-          timeMax: {
+          endDate: {
             type: 'string' as const,
-            description: 'Fecha/hora de fin para filtrar eventos. Formato ISO 8601: "2024-03-20T23:59:59"'
+            description: 'Fecha de FIN para filtrar eventos del calendario. NO uses timeMax ni --end. Formato: fecha simple (2024-03-20), RFC3339 (2024-03-20T23:59:59), o relativa (today, tomorrow, monday). EJEMPLOS: "2024-03-20", "today", "tomorrow"'
           },
           maxResults: {
             type: 'number' as const,
@@ -341,8 +341,8 @@ PARAMETERS IMPORTANTES:
       case 'calendar events':
         command = this.buildCalendarEventsCommand({
           calendarId: params.calendarId as string | undefined,
-          timeMin: params.timeMin as string | undefined,
-          timeMax: params.timeMax as string | undefined,
+          startDate: params.startDate as string | undefined,
+          endDate: params.endDate as string | undefined,
           maxResults: params.maxResults as number | undefined
         });
         break;

@@ -14,7 +14,7 @@ export const ConfigSchema = z.object({
   agent: z.object({
     maxContextMessages: z.number().int().positive().default(10),
     maxIterations: z.number().int().min(1).max(10).default(5),
-    systemPrompt: z.string().default('Eres "OpenGravity", la Arquitecta de Software Senior y mano derecha de Pablo. Tu personalidad es impecable, técnica, directa y con un sarcasmo elegante. Hablas con modismos de Chile y Argentina (fiera, crack, boludo, al toque). MODOS: 1) ENTRADA DE VOZ: Ignora errores fonéticos. 2) SALIDA DE VOZ: Sé extremadamente conciso (max 2-3 oraciones). 3) HERRAMIENTAS: Tenés acceso a Firestore (OMNI-TOOL), VISION (image_generation) y RESEARCH (google_search).'),
+    systemPrompt: z.string().default('Eres "OpenGravity", la Arquitecta de Software Senior y mano derecha de Pablo. Tu personalidad es impecable, técnica, directa y con un sarcasmo elegante. Hablas con modismos de Chile y Argentina (fiera, crack, boludo, al toque). MODOS: 1) ENTRADA DE VOZ: Ignora errores fonéticos. 2) SALIDA DE VOZ: Sé extremadamente conciso (max 2-3 oraciones). 3) HERRAMIENTAS: Tenés acceso a Firestore (OMNI-TOOL), VISION (DALL-E 3) y RESEARCH (google_search).'),
   }),
   database: z.object({
     dbPath: z.string().default('./data/opengravity.db'),
@@ -25,6 +25,9 @@ export const ConfigSchema = z.object({
     whisperApiKey: z.string().optional(),
     elevenlabsVoiceId: z.string().default('hpp4J3VqNfWAUOO0d1Us'),
 
+  }),
+  vision: z.object({
+    openaiApiKey: z.string().optional(),
   }),
   shell: z.object({
     timeoutMs: z.number().int().positive().default(30000),
@@ -49,6 +52,7 @@ export interface EnvSchema {
   WHISPER_PROVIDER?: string;
   ELEVENLABS_VOICE_ID?: string;
   SHELL_TIMEOUT_MS?: string;
+  OPENAI_API_KEY?: string;
 }
 
 export function parseConfig(env: EnvSchema): Config {
@@ -79,6 +83,9 @@ export function parseConfig(env: EnvSchema): Config {
       whisperApiKey: env.WHISPER_API_KEY ?? env.GROQ_API_KEY,
       elevenlabsVoiceId: env.ELEVENLABS_VOICE_ID ?? 'hpp4J3VqNfWAUOO0d1Us',
 
+    },
+    vision: {
+      openaiApiKey: env.OPENAI_API_KEY,
     },
     shell: {
       timeoutMs: parseInt(env.SHELL_TIMEOUT_MS ?? '30000', 10),
