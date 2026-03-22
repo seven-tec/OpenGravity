@@ -207,10 +207,11 @@ export class FirestoreService {
       }));
 
     } catch (error: any) {
-      const isIndexError = error.message.includes('FAILED_PRECONDITION') || error.message.includes('vector index');
+      const isIndexError = error.message.includes('FAILED_PRECONDITION') || error.message.includes('vector index') || error.message.includes('index');
       
       if (isIndexError) {
-        console.error('❌ [Firestore] MISSING VECTOR INDEX!');
+        console.error('❌ [Firestore] ERROR DE ÍNDICE! Pablo, hacé clic en este link para crearlo automáticamente:');
+        console.error(`   ${error.message}`);
       } else {
         console.error('[Firestore] Native semantic search failed:', error.message);
       }
