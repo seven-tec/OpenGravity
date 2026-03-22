@@ -138,6 +138,20 @@ export class FirestoreService {
   }
 
 
+  async clearMessages(userId: string): Promise<void> {
+    if (!this.isInitialized || !this.db) return;
+    try {
+      const batch = this.db.batch();
+      const snapshot = await this.db.collection('contexts').doc(userId).collection('messages').get();
+      snapshot.docs.forEach((doc) => {
+        batch.delete(doc.ref);
+      });
+      await batch.commit();
+    } catch (error) {
+      this.handleFirestoreError(error);
+    }
+  }
+
   async getRecentMessages(userId: string, limit: number): Promise<any[]> {
     if (!this.isInitialized || !this.db) return [];
 

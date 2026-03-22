@@ -29,6 +29,14 @@ export class Agent {
     return this.tools.names;
   }
 
+  async clearHistory(userId: string): Promise<void> {
+    this.db.clearOldMessages(userId, 0);
+    // TypeScript resolverá esto si agregamos clearMessages a FirestoreService
+    if (typeof (this.firestore as any).clearMessages === 'function') {
+      await (this.firestore as any).clearMessages(userId).catch(() => {});
+    }
+  }
+
   async process(userId: string, userMessage: string, isVoice = false): Promise<string> {
     const maxIterations = this.config.agent.maxIterations;
     const maxContextMessages = this.config.agent.maxContextMessages;

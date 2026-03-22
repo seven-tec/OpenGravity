@@ -42,9 +42,9 @@ _Todo operacional._`, { parse_mode: 'Markdown' });
 
     async onClear(ctx: AppContext): Promise<void> {
       const userId = ctx.from!.id.toString();
-      db.clearOldMessages(userId, 0);
+      await agent.clearHistory(userId);
       
-      await ctx.reply('🗑️ Historial limpiado.');
+      await ctx.reply('🗑️ Historial y contexto limpiados (SQLite + Firestore).');
     },
 
     async onMemory(ctx: AppContext): Promise<void> {
