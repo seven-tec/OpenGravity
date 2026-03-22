@@ -35,6 +35,7 @@ export const ConfigSchema = z.object({
   }),
   dev: z.object({
     githubToken: z.string().optional(),
+    githubUsername: z.string().optional(),
   }),
   shell: z.object({
     timeoutMs: z.number().int().positive().default(30000),
@@ -63,6 +64,7 @@ export interface EnvSchema {
   HF_TOKEN?: string;
   TAVILY_API_KEY?: string;
   GITHUB_TOKEN?: string;
+  GITHUB_USERNAME?: string;
 }
 
 export function parseConfig(env: EnvSchema): Config {
@@ -103,6 +105,7 @@ export function parseConfig(env: EnvSchema): Config {
     },
     dev: {
       githubToken: env.GITHUB_TOKEN,
+      githubUsername: env.GITHUB_USERNAME,
     },
     shell: {
       timeoutMs: parseInt(env.SHELL_TIMEOUT_MS ?? '30000', 10),

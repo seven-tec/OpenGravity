@@ -44,10 +44,16 @@ async function main() {
   });
 
   try {
+    console.log('[Bot] Attempting to clear any existing webhook...');
     await bot.api.deleteWebhook({ drop_pending_updates: true });
     console.log('[Bot] Webhook cleared successfully.');
-  } catch (err) {
-    console.warn('[Bot] Warning: Could not clear webhook (DNS/Network issue). Continuing anyway...');
+  } catch (err: any) {
+    if (err?.response?.error_code === 409) {
+      console.warn('[Bot] ⚠️ 409 Conflict detected: Another bot instance may be running!');
+      console.warn('[Bot] ⚠️ Telegram has an existing webhook. Force delete may be needed.');
+    } else {
+      console.warn('[Bot] Warning: Could not clear webhook (DNS/Network issue). Continuing anyway...');
+    }
   }
   
   console.log('[Bot] Webhook check finished.');

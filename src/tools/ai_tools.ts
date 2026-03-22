@@ -167,9 +167,11 @@ export class GithubTool implements Tool {
   });
 
   private token?: string;
+  private username?: string;
 
   constructor(deps: ToolDependencies) {
     this.token = deps.config.dev.githubToken;
+    this.username = deps.config.dev.githubUsername;
   }
 
   getDefinition() {
@@ -196,14 +198,13 @@ export class GithubTool implements Tool {
       return JSON.stringify({ success: false, error: 'GITHUB_TOKEN missing', _stopLoop: true });
     }
 
-    let finalOwner = owner || process.env.GITHUB_USERNAME;
+    let finalOwner = owner || this.username;
     let finalRepo = repo || 'OpenGravity';
 
-    // Validar placeholders de variables que no fueron reemplazadas en el despliegue
-    if (finalOwner === '$GITHUB_USERNAME' || finalOwner === 'tu_usuario' || !finalOwner) {
+    if (!finalOwner) {
       return JSON.stringify({ 
         success: false, 
-        error: "CONFIGURACIÓN INCOMPLETA: Faltan 'owner' o GITHUB_USERNAME en el sistema.", 
+        error: "CONFIGURACIÓN INCOMPLETA: Faltan 'owner' o GITHUB_USERNAME en el sistema. Asegúrate de definir GITHUB_USERNAME en tu .env", 
         _stopLoop: true 
       });
     }
