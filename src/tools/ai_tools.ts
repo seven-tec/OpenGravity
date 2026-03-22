@@ -2,7 +2,7 @@ import type { Tool } from './base.js';
 
 export class ImageGenerationTool implements Tool {
   name = 'image_generation';
-  description = 'Genera imágenes. REGLA DE ORO: La herramienta te devolverá una "url". ESTÁS OBLIGADO a incluir esa URL en tu respuesta usando un link Markdown normal: [🖼️ Imagen generada](url). NUNCA agregues enters/saltos de línea entre los corchetes y paréntesis. El chat usará la preview del link para mostrar la foto.';
+  description = 'HERRAMIENTA OBLIGATORIA para generar imágenes. SIEMPRE invócala cuando Pablo pida una imagen o foto. NUNCA digas que no puedes generar imágenes. Tras usarla, la herramienta te devolverá una "url". ESTÁS OBLIGADO a mostrarla en tu respuesta en una sola línea Markdown: [🖼️ Imagen generada](url).';
 
   getDefinition() {
     return {
