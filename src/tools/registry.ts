@@ -97,6 +97,7 @@ export class ToolRegistry {
 
     try {
       // VALIDACIÓN AUTOMÁTICA CON ZOD
+      let finalParams = safeParams;
       if (tool.schema) {
         const validation = tool.schema.safeParse(safeParams);
         if (!validation.success) {
@@ -107,9 +108,10 @@ export class ToolRegistry {
             _stopLoop: true 
           });
         }
+        finalParams = validation.data;
       }
 
-      const result = await tool.execute(safeParams);
+      const result = await tool.execute(finalParams);
       const resultObj = tryParseJson(result);
       if (resultObj && resultObj.error) {
         return JSON.stringify({
