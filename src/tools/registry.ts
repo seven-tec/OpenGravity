@@ -19,7 +19,7 @@ export class ToolRegistry {
     }));
     this.register(new ManagePersonalKnowledgeTool());
     this.register(new ImageGenerationTool(config.vision.hfToken));
-    this.register(new GoogleSearchTool());
+    this.register(new GoogleSearchTool(config.research.tavilyApiKey));
     this.register(new GoogleWorkspaceTool());
 
     if (db) {

@@ -103,7 +103,13 @@ export class ImageGenerationTool implements Tool {
 
 export class GoogleSearchTool implements Tool {
   name = 'google_search';
-  description = 'Busca información en tiempo real en la web.';
+  description = 'Busca información en tiempo real en la web. Úsala para responder preguntas sobre eventos recientes, noticias, o datos que no conoces.';
+
+  private apiKey?: string;
+
+  constructor(apiKey?: string) {
+    this.apiKey = apiKey;
+  }
 
   getDefinition() {
     return {
@@ -124,11 +130,62 @@ export class GoogleSearchTool implements Tool {
 
   async execute(params: Record<string, unknown>): Promise<string> {
     const { query } = params;
-    console.log(`[GoogleSearch] Searching: "${query}"`);
-    return JSON.stringify({
-      success: false,
-      message: 'La herramienta de búsqueda (RESEARCH) está offline. Pablo tiene que configurar la API de Google Search o Tavily para que esto funcione. Tirale la oreja.',
-      _stopLoop: true
-    });
+
+    if (!this.apiKey) {
+      console.log(`[GoogleSearch] Failed: TAVILY_API_KEY is missing`);
+      return JSON.stringify({
+        success: false,
+        error: 'La herramienta de búsqueda (RESEARCH) está offline. Pablo tiene que configurar la TAVILY_API_KEY en el .env.',
+        _stopLoop: true
+      });
+    }
+
+    console.log(`[GoogleSearch] Searching Tavily for: "${query}"`);
+
+    try {
+      const response = await fetch('https://api.tavily.com/search', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          api_key: this.apiKey,
+          query: query,
+          search_depth: 'basic',
+          include_answer: true,
+          max_results: 5,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Tavily API Error: ${response.status} - ${errorText}`);
+      }
+
+      const data = await response.json() as any;
+      
+      // Tavily devuelve un "answer" si include_answer es true, lo cual es genial para el LLM
+      const results = data.results.map((r: any) => ({
+        title: r.title,
+        url: r.url,
+        content: r.content,
+      }));
+
+      return JSON.stringify({
+        success: true,
+        query: query,
+        answer: data.answer,
+        results: results,
+      });
+
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      console.error(`[GoogleSearch] Error crítico: ${msg}`);
+      return JSON.stringify({
+        success: false,
+        error: `Error al buscar en internet: ${msg}`,
+        _stopLoop: true
+      });
+    }
   }
 }

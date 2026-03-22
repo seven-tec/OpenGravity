@@ -30,6 +30,9 @@ export const ConfigSchema = z.object({
     openaiApiKey: z.string().optional(),
     hfToken: z.string().optional(),
   }),
+  research: z.object({
+    tavilyApiKey: z.string().optional(),
+  }),
   shell: z.object({
     timeoutMs: z.number().int().positive().default(30000),
   }),
@@ -55,6 +58,7 @@ export interface EnvSchema {
   SHELL_TIMEOUT_MS?: string;
   OPENAI_API_KEY?: string;
   HF_TOKEN?: string;
+  TAVILY_API_KEY?: string;
 }
 
 export function parseConfig(env: EnvSchema): Config {
@@ -89,6 +93,9 @@ export function parseConfig(env: EnvSchema): Config {
     vision: {
       openaiApiKey: env.OPENAI_API_KEY,
       hfToken: env.HF_TOKEN,
+    },
+    research: {
+      tavilyApiKey: env.TAVILY_API_KEY,
     },
     shell: {
       timeoutMs: parseInt(env.SHELL_TIMEOUT_MS ?? '30000', 10),
