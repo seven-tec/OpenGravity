@@ -24,12 +24,11 @@ export class ToolRegistry {
     for (const dir of toolDirs) {
       if (!fs.existsSync(dir)) continue;
       
-      const files = fs.readdirSync(dir).filter(f => 
-        (f.endsWith('.ts') || f.endsWith('.js')) && 
-        !f.includes('base') && 
-        !f.includes('registry') &&
-        !f.includes('system_tools') // Ignorar el archivo viejo
-      );
+      const files = fs.readdirSync(dir).filter(f => {
+        const isCodeFile = (f.endsWith('.ts') || f.endsWith('.js')) && !f.endsWith('.d.ts') && !f.endsWith('.js.map');
+        const isNotInternal = !f.includes('base') && !f.includes('registry') && !f.includes('system_tools');
+        return isCodeFile && isNotInternal;
+      });
 
       for (const file of files) {
         try {
