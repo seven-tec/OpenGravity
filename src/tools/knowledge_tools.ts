@@ -13,14 +13,16 @@ export class ManagePersonalKnowledgeTool implements Tool {
 
 USA ESTA HERRAMIENTA PARA:
 - Guardar información que quieres RECORDAR después (recuerdos, deudas, preferencias)
-- Clasificar notas y aprendizajes por categoría (fitness, finanzas, novela, logística, etc.)
+- Clasificar notas y aprendizajes por categoría (fitness, finanzas, novela, logística, estrategia, aprendizaje, etc.)
 - Consultar información guardada anteriormente
 - Actualizar entradas existentes
 
 EJEMPLOS DE USO:
 - "guarda que Roberto me debe $50 de la cena" → action: store, category: deudas
+- "recuerda que nuestra visión es automatizar todo" → action: store, category: estrategia
 - "recuerda que mi hipertrofia es de 3x10" → action: store, category: fitness  
 - "qué ejercicios hice la semana pasada?" → action: query, category: fitness
+- "según nuestra estrategia, cuál es el próximo hito?" → action: query, category: estrategia
 - "actualiza mi peso en hipertrofia a 90kg" → action: update, category: fitness
 
 NO USES ESTA HERRAMIENTA PARA:
