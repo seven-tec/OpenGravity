@@ -110,7 +110,11 @@ PARAMETERS IMPORTANTES:
 
   private buildCalendarEventsCommand(params: CalendarEventsParams): string {
     const parts = ['gog', 'calendar', 'events'];
-    if (params.calendarId) parts.push(`--cal=${this.escapeShellValue(params.calendarId)}`);
+    if (params.calendarId) {
+      parts.push(this.escapeShellValue(params.calendarId));
+    } else {
+      parts.push('primary');
+    }
     if (params.startDate) parts.push(`--from=${this.escapeShellValue(params.startDate)}`);
     if (params.endDate) parts.push(`--to=${this.escapeShellValue(params.endDate)}`);
     if (params.maxResults) parts.push(`--max=${params.maxResults}`);
@@ -119,24 +123,25 @@ PARAMETERS IMPORTANTES:
 
   private buildCalendarCreateCommand(params: CalendarCreateParams): string {
     const parts = ['gog', 'calendar', 'create'];
+    parts.push(this.escapeShellValue(params.calendarId || 'primary'));
     parts.push(`--summary=${this.escapeShellValue(params.summary)}`);
-    parts.push(`--start=${this.escapeShellValue(params.startTime)}`);
-    parts.push(`--end=${this.escapeShellValue(params.endTime)}`);
+    parts.push(`--from=${this.escapeShellValue(params.startTime)}`);
+    parts.push(`--to=${this.escapeShellValue(params.endTime)}`);
     if (params.description) parts.push(`--description=${this.escapeShellValue(params.description)}`);
     if (params.location) parts.push(`--location=${this.escapeShellValue(params.location)}`);
     if (params.attendees?.length) {
       parts.push(`--attendees=${this.escapeShellValue(params.attendees.join(','))}`);
     }
-    if (params.calendarId) parts.push(`--calendarId=${this.escapeShellValue(params.calendarId)}`);
     return parts.join(' ');
   }
 
   private buildCalendarUpdateCommand(params: CalendarUpdateParams): string {
     const parts = ['gog', 'calendar', 'update'];
-    parts.push(`--eventId=${this.escapeShellValue(params.eventId)}`);
+    parts.push('primary'); // Default calendarId
+    parts.push(this.escapeShellValue(params.eventId));
     if (params.summary) parts.push(`--summary=${this.escapeShellValue(params.summary)}`);
-    if (params.startTime) parts.push(`--start=${this.escapeShellValue(params.startTime)}`);
-    if (params.endTime) parts.push(`--end=${this.escapeShellValue(params.endTime)}`);
+    if (params.startTime) parts.push(`--from=${this.escapeShellValue(params.startTime)}`);
+    if (params.endTime) parts.push(`--to=${this.escapeShellValue(params.endTime)}`);
     if (params.description) parts.push(`--description=${this.escapeShellValue(params.description)}`);
     if (params.location) parts.push(`--location=${this.escapeShellValue(params.location)}`);
     return parts.join(' ');
@@ -144,7 +149,7 @@ PARAMETERS IMPORTANTES:
 
   private buildGmailSearchCommand(params: GmailSearchParams): string {
     const parts = ['gog', 'gmail', 'search'];
-    parts.push(`--query=${this.escapeShellValue(params.query)}`);
+    parts.push(this.escapeShellValue(params.query));
     if (params.maxResults) parts.push(`--max=${params.maxResults}`);
     return parts.join(' ');
   }
@@ -166,7 +171,7 @@ PARAMETERS IMPORTANTES:
 
   private buildDriveSearchCommand(params: DriveSearchParams): string {
     const parts = ['gog', 'drive', 'search'];
-    parts.push(`--query=${this.escapeShellValue(params.query)}`);
+    parts.push(this.escapeShellValue(params.query));
     if (params.maxResults) parts.push(`--max=${params.maxResults}`);
     return parts.join(' ');
   }
@@ -179,36 +184,42 @@ PARAMETERS IMPORTANTES:
 
   private buildSheetsGetCommand(params: SheetsGetParams): string {
     const parts = ['gog', 'sheets', 'get'];
-    parts.push(`--id=${this.escapeShellValue(params.spreadsheetId)}`);
-    if (params.range) parts.push(`--range=${this.escapeShellValue(params.range)}`);
+    parts.push(this.escapeShellValue(params.spreadsheetId));
+    if (params.range) {
+      parts.push(this.escapeShellValue(params.range));
+    } else {
+      parts.push('A1:Z100'); // Default range if not provided, gog requires it
+    }
     return parts.join(' ');
   }
 
   private buildSheetsUpdateCommand(params: SheetsUpdateParams): string {
     const parts = ['gog', 'sheets', 'update'];
-    parts.push(`--id=${this.escapeShellValue(params.spreadsheetId)}`);
-    parts.push(`--range=${this.escapeShellValue(params.range)}`);
-    parts.push(`--values=${this.escapeShellValue(JSON.stringify(params.values))}`);
+    parts.push(this.escapeShellValue(params.spreadsheetId));
+    parts.push(this.escapeShellValue(params.range));
+    parts.push(`--values-json=${this.escapeShellValue(JSON.stringify(params.values))}`);
+    parts.push('--input=USER_ENTERED');
     return parts.join(' ');
   }
 
   private buildSheetsAppendCommand(params: SheetsAppendParams): string {
     const parts = ['gog', 'sheets', 'append'];
-    parts.push(`--id=${this.escapeShellValue(params.spreadsheetId)}`);
-    parts.push(`--range=${this.escapeShellValue(params.range)}`);
-    parts.push(`--values=${this.escapeShellValue(JSON.stringify(params.values))}`);
+    parts.push(this.escapeShellValue(params.spreadsheetId));
+    parts.push(this.escapeShellValue(params.range));
+    parts.push(`--values-json=${this.escapeShellValue(JSON.stringify(params.values))}`);
+    parts.push('--input=USER_ENTERED');
     return parts.join(' ');
   }
 
   private buildDocsCatCommand(params: DocsCatParams): string {
     const parts = ['gog', 'docs', 'cat'];
-    parts.push(`--id=${this.escapeShellValue(params.documentId)}`);
+    parts.push(this.escapeShellValue(params.documentId));
     return parts.join(' ');
   }
 
   private buildDocsExportCommand(params: DocsExportParams): string {
     const parts = ['gog', 'docs', 'export'];
-    parts.push(`--id=${this.escapeShellValue(params.documentId)}`);
+    parts.push(this.escapeShellValue(params.documentId));
     parts.push(`--format=${this.escapeShellValue(params.format)}`);
     return parts.join(' ');
   }
