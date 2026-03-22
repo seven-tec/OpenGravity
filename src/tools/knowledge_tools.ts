@@ -1,13 +1,7 @@
-import type { Tool } from './base.js';
+import type { Tool, ToolDependencies } from './base.js';
 import type { FirestoreService } from '../services/database/firestore.js';
 
-let firestore: FirestoreService;
-
-export function setFirestore(service: FirestoreService) {
-  firestore = service;
-}
-
-export class ManagePersonalKnowledgeTool implements Tool {
+export default class ManagePersonalKnowledgeTool implements Tool {
   name = 'manage_personal_knowledge';
   description = `Base de conocimiento personal de Pablo (almacenado en Firestore).
 
@@ -32,6 +26,12 @@ NO USES ESTA HERRAMIENTA PARA:
 - Cualquier cosa relacionada con Google Workspace
 - Para eso, usa 'google_workspace'`;
 
+  private firestore: FirestoreService | undefined;
+
+  constructor(deps: ToolDependencies) {
+    this.firestore = deps.firestore;
+  }
+
   getDefinition() {
     return {
       name: this.name,
@@ -53,13 +53,13 @@ NO USES ESTA HERRAMIENTA PARA:
             enum: ["store", "update", "query"] 
           }
         },
-        required: ['category', 'action'], // data es opcional para query
+        required: ['category', 'action'],
       },
     };
   }
 
   async execute(params: Record<string, unknown>): Promise<string> {
-    if (!firestore || !firestore.initialized) {
+    if (!this.firestore || !this.firestore.initialized) {
       return JSON.stringify({ error: 'Firestore no está inicializado. No puedo gestionar el conocimiento.', _stopLoop: true });
     }
 
@@ -68,15 +68,14 @@ NO USES ESTA HERRAMIENTA PARA:
 
     try {
       if (action === 'query') {
-        const queryText = data?.content || data?.query || category; // Priorizamos contenido del query si existe
-        const results = await (firestore as any).semanticSearch(targetUserId, category, queryText, 5);
+        const queryText = data?.content || data?.query || category;
+        const results = await (this.firestore as any).semanticSearch(targetUserId, category, queryText, 5);
         if (results.length === 0) {
           return `No encontré nada guardado recientemente en la categoría '${category}'.`;
         }
         
         const context = results.map((item: any) => {
           const { id, createdAt, metadata, ...rest } = item;
-          // Si tiene un campo 'content', lo priorizamos, sino stringificamos el objeto
           return rest.content || JSON.stringify(rest);
         }).join("\n");
         
@@ -87,7 +86,7 @@ NO USES ESTA HERRAMIENTA PARA:
         return `Para la acción '${action}' necesito el objeto 'data' con la información.`;
       }
 
-      await firestore.saveKnowledge(targetUserId, category, action, data);
+      await this.firestore.saveKnowledge(targetUserId, category, action, data);
 
       if (action === 'store') {
         return `Entendido, Pablo. Clasificado en '${category}' y guardado con éxito en el Omni-Brain.`;

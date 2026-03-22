@@ -11,6 +11,7 @@ import { createBot } from './bot/bot.js';
 import { FirestoreService } from './services/database/firestore.js';
 import { AudioService } from './services/audio/audio_service.js';
 import { TTSInterface } from './services/audio/tts_interface.js';
+import { DASHBOARD_HTML } from './utils/dashboard_html.js';
 
 // Override system DNS if needed
 try {
@@ -33,9 +34,17 @@ function createHealthCheckServer(): http.Server {
         timestamp: new Date().toISOString(),
         service: 'opengravity'
       }));
-    } else if (req.url === '/') {
-      res.writeHead(200, { 'Content-Type': 'text/plain' });
-      res.end('OpenGravity Service is running. Check /health for status.');
+    } else if (req.url === '/api/status') {
+      res.writeHead(200, { 
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*' // Para dev local si hace falta
+      });
+      res.end(JSON.stringify({ 
+        events: Agent.events 
+      }));
+    } else if (req.url === '/dashboard' || req.url === '/') {
+      res.writeHead(200, { 'Content-Type': 'text/html' });
+      res.end(DASHBOARD_HTML);
     } else {
       res.writeHead(404, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ status: 'not_found' }));
@@ -79,7 +88,7 @@ async function main() {
 
   const tools = new ToolRegistry();
   await db.initialize();
-  tools.initialize(config, db, firestore);
+  await tools.initialize({ config, db, firestore });
   console.log(`[Tools] ${tools.names.length} tools registered`);
 
   const agent = new Agent(config, db, tools, firestore);

@@ -1,36 +1,65 @@
-import type { Tool } from './base.js';
-import { GetCurrentTimeTool, GetRecentMessagesTool, ExecuteShellTool, setDatabase } from './system_tools.js';
-import { ManagePersonalKnowledgeTool, setFirestore } from './knowledge_tools.js';
-import { ImageGenerationTool, GoogleSearchTool, GithubTool } from './ai_tools.js';
-import { ProjectAnalystTool } from './project_analyst.js';
-import { GoogleWorkspaceTool } from './google_tools.js';
-import type { Config } from '../config.js';
-import type { DatabaseManager } from '../core/database.js';
-import type { FirestoreService } from '../services/database/firestore.js';
+import fs from 'fs';
+import path from 'path';
+import type { Tool, ToolConstructor, ToolDependencies } from './base.js';
+import { fileURLToPath, pathToFileURL } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 export class ToolRegistry {
   private tools: Map<string, Tool> = new Map();
 
-  initialize(config: Config, db?: DatabaseManager, firestore?: FirestoreService): void {
-    this.register(new GetCurrentTimeTool());
-    this.register(new GetRecentMessagesTool());
-    this.register(new ExecuteShellTool({
-      userId: '',
-      shellTimeoutMs: config.shell.timeoutMs,
-    }));
-    this.register(new ManagePersonalKnowledgeTool());
-    this.register(new ImageGenerationTool(config.vision.hfToken));
-    this.register(new GoogleSearchTool(config.research.tavilyApiKey));
-    this.register(new GithubTool(config.dev.githubToken));
-    this.register(new ProjectAnalystTool());
-    this.register(new GoogleWorkspaceTool());
-
-    if (db) {
-      setDatabase(db);
-    }
+  /**
+   * Inicializa el registro descubriendo y cargando herramientas dinámicamente.
+   */
+  async initialize(deps: ToolDependencies): Promise<void> {
+    console.log('[ToolRegistry] Starting dynamic tool discovery...');
     
-    if (firestore) {
-      setFirestore(firestore);
+    // Directorios donde buscar herramientas
+    const toolDirs = [
+      path.join(__dirname, 'core'), // Herramientas individuales (un tool por archivo, export default)
+      path.join(__dirname)          // Herramientas legacy/agrupadas (múltiples tools, named exports)
+    ];
+
+    for (const dir of toolDirs) {
+      if (!fs.existsSync(dir)) continue;
+      
+      const files = fs.readdirSync(dir).filter(f => 
+        (f.endsWith('.ts') || f.endsWith('.js')) && 
+        !f.includes('base') && 
+        !f.includes('registry') &&
+        !f.includes('system_tools') // Ignorar el archivo viejo
+      );
+
+      for (const file of files) {
+        try {
+          const filePath = path.join(dir, file);
+          const fileUrl = pathToFileURL(filePath).href;
+          const module = await import(fileUrl);
+          
+          // 1. Intentar cargar export default (Clase individual)
+          if (module.default && typeof module.default === 'function') {
+            const ToolClass = module.default as ToolConstructor;
+            const toolInstance = new ToolClass(deps);
+            this.register(toolInstance);
+          } 
+          
+          // 2. Intentar cargar named exports (Clases de herramientas)
+          for (const key in module) {
+            if (key !== 'default' && typeof module[key] === 'function' && key.endsWith('Tool')) {
+              const ToolClass = module[key] as ToolConstructor;
+              try {
+                const toolInstance = new ToolClass(deps);
+                this.register(toolInstance);
+              } catch (e) {
+                // Si falla al instanciar (ej: no es una clase de tool), lo ignoramos
+              }
+            }
+          }
+        } catch (error) {
+          console.error(`[ToolRegistry] Error loading tools from ${file}:`, error);
+        }
+      }
     }
 
     console.log(`[ToolRegistry] Initialized ${this.tools.size} tools:`);
@@ -40,6 +69,9 @@ export class ToolRegistry {
   }
 
   register(tool: Tool): void {
+    if (this.tools.has(tool.name)) {
+      console.warn(`[ToolRegistry] Overwriting tool: ${tool.name}`);
+    }
     this.tools.set(tool.name, tool);
   }
 

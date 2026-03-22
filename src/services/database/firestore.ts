@@ -135,43 +135,80 @@ export class FirestoreService {
     }
 
     try {
-      console.log(`[Firestore] Starting semantic search in ${category} for: "${query}"`);
+      console.log(`[Firestore] Starting native semantic search in ${category} for: "${query}"`);
       const queryVector = await getEmbedding(query, this.hfToken);
       
-      // Traemos los últimos 50 items de esa categoría para comparar en memoria
-      // (Para un asistente personal es más que suficiente y ahorra costos de índices vectoriales)
-      const snapshot = await this.db
+      const collectionRef = this.db
         .collection('users')
         .doc(userId)
         .collection('knowledge')
         .doc(category)
-        .collection('items')
-        .orderBy('createdAt', 'desc')
-        .limit(50)
-        .get();
+        .collection('items');
 
-      const docs = snapshot.docs.map(doc => ({
+      // Búsqueda vectorial nativa (findNearest) disponible en firebase-admin v12+
+      const vectorQuery = collectionRef.findNearest({
+        vectorField: 'embedding',
+        queryVector: queryVector,
+        distanceMeasure: 'COSINE',
+        limit: limit,
+      });
+
+      const snapshot = await vectorQuery.get();
+      
+      if (snapshot.empty) {
+        console.log('[Firestore] Native vector search returned no results (maybe no data with embeddings), trying manual fallback...');
+        return this.manualSemanticSearchFallback(userId, category, queryVector, limit);
+      }
+
+      const results = snapshot.docs.map(doc => ({
         id: doc.id,
-        ...doc.data()
-      })) as any[];
+        ...doc.data(),
+        // Nota: El snapshot de findNearest puede incluir metadatos de distancia si se configuran
+      }));
 
-      // Filtramos los que tienen embedding y calculamos similitud
-      const results = docs
-        .filter(doc => doc.embedding && Array.isArray(doc.embedding))
-        .map(doc => ({
-          ...doc,
-          similarity: cosineSimilarity(queryVector, doc.embedding)
-        }))
-        .sort((a, b) => b.similarity - a.similarity)
-        .slice(0, limit);
-
-      console.log(`[Firestore] Found ${results.length} semantic matches`);
+      console.log(`[Firestore] Found ${results.length} native semantic matches`);
       return results;
 
-    } catch (error) {
-      console.error('[Firestore] Semantic search failed:', error);
-      return this.queryKnowledge(userId, category, limit);
+    } catch (error: any) {
+      console.error('[Firestore] Native semantic search failed (likely missing index or SDK version issue):', error.message);
+      // Fallback automático al método manual anterior
+      try {
+        const queryVector = await getEmbedding(query, this.hfToken);
+        return this.manualSemanticSearchFallback(userId, category, queryVector, limit);
+      } catch (err) {
+        return this.queryKnowledge(userId, category, limit);
+      }
     }
+  }
+
+  private async manualSemanticSearchFallback(userId: string, category: string, queryVector: number[], limit: number): Promise<any[]> {
+    if (!this.db) return [];
+    
+    // Traemos los últimos 50 items de esa categoría para comparar en memoria
+    const snapshot = await this.db
+      .collection('users')
+      .doc(userId)
+      .collection('knowledge')
+      .doc(category)
+      .collection('items')
+      .orderBy('createdAt', 'desc')
+      .limit(50)
+      .get();
+
+    const docs = snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    })) as any[];
+
+    // Filtramos los que tienen embedding y calculamos similitud
+    return docs
+      .filter(doc => doc.embedding && Array.isArray(doc.embedding))
+      .map(doc => ({
+        ...doc,
+        similarity: cosineSimilarity(queryVector, doc.embedding)
+      }))
+      .sort((a, b) => b.similarity - a.similarity)
+      .slice(0, limit);
   }
   async queryKnowledge(userId: string, category: string, limit: number = 5): Promise<any[]> {
     if (!this.isInitialized || !this.db) return [];

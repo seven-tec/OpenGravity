@@ -1,9 +1,13 @@
 import fs from 'fs';
 import path from 'path';
-import type { Tool } from './base.js';
+import type { Tool, ToolDependencies } from './base.js';
 
-export class ProjectAnalystTool implements Tool {
+export default class ProjectAnalystTool implements Tool {
   name = 'project_analyst';
+
+  constructor(_deps: ToolDependencies) {
+    // Introspection tool, no complex deps yet
+  }
   description = 'Herramienta de introspección para analizar la arquitectura y el código de proyectos locales. Permite listar archivos, ver estructuras y leer contenidos de cualquier directorio del sistema.';
 
   getDefinition() {

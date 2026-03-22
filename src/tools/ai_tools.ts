@@ -1,4 +1,4 @@
-import type { Tool } from './base.js';
+import type { Tool, ToolDependencies } from './base.js';
 
 export class ImageGenerationTool implements Tool {
   name = 'image_generation';
@@ -6,8 +6,8 @@ export class ImageGenerationTool implements Tool {
   
   private hfToken?: string;
 
-  constructor(hfToken?: string) {
-    this.hfToken = hfToken;
+  constructor(deps: ToolDependencies) {
+    this.hfToken = deps.config.vision.hfToken;
   }
 
   getDefinition() {
@@ -107,8 +107,8 @@ export class GoogleSearchTool implements Tool {
 
   private apiKey?: string;
 
-  constructor(apiKey?: string) {
-    this.apiKey = apiKey;
+  constructor(deps: ToolDependencies) {
+    this.apiKey = deps.config.research.tavilyApiKey;
   }
 
   getDefinition() {
@@ -196,8 +196,8 @@ export class GithubTool implements Tool {
 
   private token?: string;
 
-  constructor(token?: string) {
-    this.token = token;
+  constructor(deps: ToolDependencies) {
+    this.token = deps.config.dev.githubToken;
   }
 
   getDefinition() {

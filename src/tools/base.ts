@@ -1,3 +1,15 @@
+import type { Config } from '../config.js';
+import type { DatabaseManager } from '../core/database.js';
+import type { FirestoreService } from '../services/database/firestore.js';
+
+export interface ToolDependencies {
+  config: Config;
+  db?: DatabaseManager;
+  firestore?: FirestoreService;
+}
+
+export type ToolConstructor = new (deps: ToolDependencies) => Tool;
+
 export interface Tool {
   name: string;
   description: string;
