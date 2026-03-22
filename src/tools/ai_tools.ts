@@ -2,7 +2,13 @@ import type { Tool } from './base.js';
 
 export class ImageGenerationTool implements Tool {
   name = 'image_generation';
-  description = 'Delega la creación de imágenes a un motor externo (Pollinations). Ejecuta esta herramienta OBLIGATORIAMENTE cuando el usuario te pida generar, crear, dibujar o mostrar una imagen/foto. Como tú eres un modelo de texto, ESTA HERRAMIENTA DIBUJA POR TI. Al devolverte la URL de la imagen generada, incorpórala en tu respuesta usando exactamente este link Markdown: [🖼️ Ver Imagen](url).';
+  description = 'Herramienta EXCLUSIVA para generar o dibujar imágenes. Úsala SIEMPRE que Pablo pida "genera una imagen", "dibuja", "muestrame una foto", etc. Tú eres texto, esta tool dibuja por ti. Al devolverte la URL, muéstrala exactamente así: [🖼️ Ver Imagen](url).';
+  
+  private hfToken?: string;
+
+  constructor(hfToken?: string) {
+    this.hfToken = hfToken;
+  }
 
   getDefinition() {
     return {
@@ -13,15 +19,7 @@ export class ImageGenerationTool implements Tool {
         properties: {
           prompt: {
             type: 'string',
-            description: 'Descripción detallada de la imagen a generar. Incluye detalles de iluminación, plano, estilo, etc.'
-          },
-          width: {
-            type: 'number',
-            description: 'Resolución de ancho (default 1024).'
-          },
-          height: {
-            type: 'number',
-            description: 'Resolución de alto (default 1024).'
+            description: 'Descripción detallada en inglés de la imagen a generar (sujeto, fondo, estilo, iluminación).'
           }
         },
         required: ['prompt']
@@ -31,24 +29,75 @@ export class ImageGenerationTool implements Tool {
 
   async execute(params: Record<string, unknown>): Promise<string> {
     const prompt = params.prompt as string;
-    const width = (params.width as number) || 1024;
-    const height = (params.height as number) || 1024;
     
-    // Un seed aleatorio obliga a Pollinations a generar una imagen nueva cada vez
-    const seed = Math.floor(Math.random() * 1000000);
-    
-    // Construimos la URL de Pollinations. Usamos la ruta estable /p/ que provee OpenGraph para Telegram
-    const imageUrl = `https://pollinations.ai/p/${encodeURIComponent(prompt)}?width=${width}&height=${height}&seed=${seed}&nologo=true`;
+    if (!this.hfToken) {
+      console.log(`[ImageGeneration] Failed: HF_TOKEN is missing`);
+      return JSON.stringify({
+        success: false,
+        error: "FALTA CONFIGURACIÓN: HF_TOKEN no está definido en el .env. Carga el Access Token de Hugging Face para poder generar imágenes con FLUX.1.",
+        _stopLoop: true
+      });
+    }
 
-    console.log(`[ImageGeneration] Generating free image with Pollinations: "${prompt}"`);
+    try {
+      console.log(`[ImageGeneration] Generating image with Hugging Face (FLUX.1-schnell): "${prompt}"`);
+      
+      // 1. Generar la imagen con Hugging Face Inference API
+      const hfResponse = await fetch(
+        "https://api-inference.huggingface.co/models/black-forest-labs/FLUX.1-schnell",
+        {
+          headers: {
+            "Authorization": `Bearer ${this.hfToken}`,
+            "Content-Type": "application/json",
+          },
+          method: "POST",
+          body: JSON.stringify({ inputs: prompt }),
+        }
+      );
 
-    return JSON.stringify({
-      success: true,
-      url: imageUrl,
-      prompt: prompt,
-      provider: 'pollinations.ai',
-      _llm_instruction: `MUESTRA ESTA IMAGEN AHORA MISMO en tu respuesta copiando exactamente este texto en una sola línea (sin enters): [🖼️ Imagen generada](${imageUrl})`
-    });
+      if (!hfResponse.ok) {
+        const errorText = await hfResponse.text();
+        throw new Error(`Hugging Face API Error: ${hfResponse.status} - ${errorText}`);
+      }
+
+      console.log(`[ImageGeneration] Image generated. Uploading to Catbox for Telegram...`);
+      const imageBuffer = await hfResponse.arrayBuffer();
+      const blob = new Blob([imageBuffer], { type: 'image/jpeg' });
+
+      // 2. Subir la imagen a Catbox.moe (host temporal/gratuito) para que Telegram la pueda mostrar
+      const formData = new FormData();
+      formData.append('reqtype', 'fileupload');
+      formData.append('fileToUpload', blob, 'image.jpg');
+
+      const catboxResponse = await fetch('https://catbox.moe/user/api.php', {
+        method: 'POST',
+        body: formData
+      });
+
+      if (!catboxResponse.ok) {
+        throw new Error(`Catbox Upload Error: ${catboxResponse.status}`);
+      }
+
+      const imageUrl = await catboxResponse.text();
+      console.log(`[ImageGeneration] Uploaded successfully: ${imageUrl}`);
+
+      return JSON.stringify({
+        success: true,
+        url: imageUrl,
+        prompt: prompt,
+        provider: 'huggingface+catbox',
+        _llm_instruction: `MUESTRA ESTA IMAGEN AHORA MISMO copiando exactamente este texto en una sola línea: [🖼️ Imagen generada](${imageUrl})`
+      });
+
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      console.error(`[ImageGeneration] Hubo un error crítico: ${msg}`);
+      return JSON.stringify({
+        success: false,
+        error: `Error al generar la imagen: ${msg}`,
+        _stopLoop: true
+      });
+    }
   }
 }
 

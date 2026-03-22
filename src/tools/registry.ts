@@ -18,7 +18,7 @@ export class ToolRegistry {
       shellTimeoutMs: config.shell.timeoutMs,
     }));
     this.register(new ManagePersonalKnowledgeTool());
-    this.register(new ImageGenerationTool());
+    this.register(new ImageGenerationTool(config.vision.hfToken));
     this.register(new GoogleSearchTool());
     this.register(new GoogleWorkspaceTool());
 
