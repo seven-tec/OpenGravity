@@ -2,7 +2,7 @@ import type { Tool } from './base.js';
 
 export class ImageGenerationTool implements Tool {
   name = 'image_generation';
-  description = 'Genera imágenes. REGLA DE ORO: La herramienta te devolverá una "url". ESTÁS OBLIGADO a mostrar esa URL en tu respuesta al usuario usando Markdown: ![texto](url). NUNCA preguntes si quiere verla, MOSTRALA INMEDIATAMENTE renderizando el markdown.';
+  description = 'Genera imágenes. REGLA DE ORO: La herramienta te devolverá una "url". ESTÁS OBLIGADO a incluir esa URL en tu respuesta usando un link Markdown normal: [🖼️ Imagen generada](url). NUNCA agregues enters/saltos de línea entre los corchetes y paréntesis. El chat usará la preview del link para mostrar la foto.';
 
   getDefinition() {
     return {
@@ -47,7 +47,7 @@ export class ImageGenerationTool implements Tool {
       url: imageUrl,
       prompt: prompt,
       provider: 'pollinations.ai',
-      _llm_instruction: `MUESTRA ESTA IMAGEN AHORA MISMO en tu respuesta usando el formato: ![${prompt.replace(/"/g, '')}](${imageUrl})`
+      _llm_instruction: `MUESTRA ESTA IMAGEN AHORA MISMO en tu respuesta copiando exactamente este texto en una sola línea (sin enters): [🖼️ Imagen generada](${imageUrl})`
     });
   }
 }
