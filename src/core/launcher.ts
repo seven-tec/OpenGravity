@@ -28,8 +28,10 @@ export class Launcher {
     this.setupDNS();
     config();
     this.injectGoogleCredentials();
-    
+
     this.config = parseConfig(process.env as EnvSchema);
+    const tokenPreview = this.config.telegram.botToken.slice(-4);
+    console.log(`[Config] Telegram Token: ****${tokenPreview}`);
     console.log(`[Config] Telegram: ${this.config.telegram.allowedUserIds.length} user(s) allowed`);
     console.log(`[Config] LLM: Groq (${this.config.llm.groqModel})`);
 
