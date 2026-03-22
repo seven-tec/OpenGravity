@@ -2,7 +2,7 @@ import type { Tool } from './base.js';
 
 export class ImageGenerationTool implements Tool {
   name = 'image_generation';
-  description = 'Genera imágenes usando Pollinations.ai (gratis y sin API key). Usa esta herramienta cuando Pablo pida ver, diseñar o visualizar algo (diagramas, escenarios de la novela, conceptos de fitness, etc.). No requiere auth.';
+  description = 'Genera imágenes. REGLA DE ORO: La herramienta te devolverá una "url". ESTÁS OBLIGADO a mostrar esa URL en tu respuesta al usuario usando Markdown: ![texto](url). NUNCA preguntes si quiere verla, MOSTRALA INMEDIATAMENTE renderizando el markdown.';
 
   getDefinition() {
     return {
@@ -46,7 +46,8 @@ export class ImageGenerationTool implements Tool {
       success: true,
       url: imageUrl,
       prompt: prompt,
-      provider: 'pollinations.ai'
+      provider: 'pollinations.ai',
+      _llm_instruction: `MUESTRA ESTA IMAGEN AHORA MISMO en tu respuesta usando el formato: ![${prompt.replace(/"/g, '')}](${imageUrl})`
     });
   }
 }
