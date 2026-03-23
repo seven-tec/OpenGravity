@@ -33,6 +33,7 @@ COPY --chown=node:node package*.json ./
 RUN npm ci --only=production && npm cache clean --force
 
 COPY --chown=node:node --from=builder /app/dist ./dist
+COPY --chown=node:node src/prompts ./src/prompts
 
 ENV NODE_ENV=production
 ENV PORT=7860
