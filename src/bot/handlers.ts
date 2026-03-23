@@ -95,14 +95,18 @@ _Todo operacional._`, { parse_mode: 'Markdown' });
           for (const match of images) {
             const imageUrl = match[1];
             try {
-              await ctx.replyWithPhoto(imageUrl);
+              const imageResponse = await fetch(imageUrl);
+              if (!imageResponse.ok) throw new Error('Failed to fetch image');
+              const imageBuffer = await imageResponse.arrayBuffer();
+              await ctx.replyWithPhoto(new InputFile(Buffer.from(imageBuffer), 'image.jpg'));
             } catch (err) {
               console.error(`[Handler] Failed to send photo: ${imageUrl}`, err);
+              await ctx.reply(`🖼️ No pude enviar la imagen desde ${imageUrl}, aca tenés el link: ${imageUrl}`);
             }
           }
+        } else {
+          await ctx.reply(response);
         }
-
-        await ctx.reply(response);
       } catch (error) {
         console.error('[Handler] Agent error:', error);
         await ctx.reply('❌ Error procesando tu mensaje. Intenta de nuevo.');
@@ -172,14 +176,18 @@ _Todo operacional._`, { parse_mode: 'Markdown' });
             for (const match of images) {
               const imageUrl = match[1];
               try {
-                await ctx.replyWithPhoto(imageUrl);
+                const imageResponse = await fetch(imageUrl);
+                if (!imageResponse.ok) throw new Error('Failed to fetch image');
+                const imageBuffer = await imageResponse.arrayBuffer();
+                await ctx.replyWithPhoto(new InputFile(Buffer.from(imageBuffer), 'image.jpg'));
               } catch (err) {
                 console.error(`[Handler] Failed to send photo: ${imageUrl}`, err);
+                await ctx.reply(`🖼️ No pude enviar la imagen desde ${imageUrl}, aca tenés el link: ${imageUrl}`);
               }
             }
+          } else {
+            await ctx.reply(response);
           }
-
-          await ctx.reply(response);
         }
 
       } catch (error) {
