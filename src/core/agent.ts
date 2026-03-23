@@ -183,7 +183,16 @@ export class Agent {
         console.log(`[Agent] toolCalls: ${response.toolCalls?.length ?? 0}`);
 
         if (response.content) {
-          this.emitEvent(userId, 'thought', response.content, traceId);
+          // Filtrar "falsas negativas" (cuando el LLM dice que no puede pero tira un tool call)
+          const isRefusal = response.content.toLowerCase().includes('lo siento') || 
+                           response.content.toLowerCase().includes('no puedo') ||
+                           response.content.toLowerCase().includes('as a language model');
+          
+          if (!(isRefusal && response.toolCalls && response.toolCalls.length > 0)) {
+            this.emitEvent(userId, 'thought', response.content, traceId);
+          } else {
+            console.log(`[Agent] Suppressing intermediate refusal thought: "${response.content.substring(0, 50)}..."`);
+          }
         }
 
         const content = response.content?.trim();
