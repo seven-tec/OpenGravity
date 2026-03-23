@@ -3,6 +3,7 @@ import type { LLMMessage, LLMResponse, ProviderError } from '../../types/index.j
 import type { LLMProvider } from './provider.js';
 import { GroqProvider } from './groq.js';
 import { OpenRouterProvider } from './openrouter.js';
+import { LaplasProvider } from './laplas.js';
 
 interface ToolDef {
   name: string;
@@ -29,8 +30,13 @@ export class LLMOrchestrator {
       this.providers.push(new OpenRouterProvider(config.llm.openrouterApiKey, config.llm.openrouterModel));
     }
 
+    if (config.llm.laplasApiKey) {
+      this.providers.push(new LaplasProvider(config.llm.laplasApiKey));
+    }
+
     if (config.llm.groqApiKey) {
-      this.providers.push(new GroqProvider(config.llm.groqApiKey, config.llm.groqModel));
+      this.providers.push(new GroqProvider(config.llm.groqApiKey, config.llm.groqModel, 'groq'));
+      this.providers.push(new GroqProvider(config.llm.groqApiKey, config.llm.groqVisionModel, 'groq-vision'));
     }
 
     if (this.providers.length === 0) {

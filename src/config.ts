@@ -8,7 +8,9 @@ export const ConfigSchema = z.object({
   llm: z.object({
     groqApiKey: z.string().min(1, 'GROQ_API_KEY is required'),
     openrouterApiKey: z.string().optional(),
+    laplasApiKey: z.string().optional(),
     groqModel: z.string().default('llama-3.3-70b-versatile'),
+    groqVisionModel: z.string().default('llama-3.2-11b-vision-preview'),
     openrouterModel: z.string().default('anthropic/claude-3-haiku'),
   }),
   agent: z.object({
@@ -49,7 +51,9 @@ export interface EnvSchema {
   TELEGRAM_ALLOWED_USER_IDS?: string;
   GROQ_API_KEY?: string;
   OPENROUTER_API_KEY?: string;
+  LAPLAS_API_KEY?: string;
   GROQ_MODEL?: string;
+  GROQ_VISION_MODEL?: string;
   OPENROUTER_MODEL?: string;
   MAX_CONTEXT_MESSAGES?: string;
   MAX_ITERATIONS?: string;
@@ -78,7 +82,9 @@ export function parseConfig(env: EnvSchema): Config {
     llm: {
       groqApiKey: env.GROQ_API_KEY ?? '',
       openrouterApiKey: env.OPENROUTER_API_KEY,
+      laplasApiKey: env.LAPLAS_API_KEY,
       groqModel: env.GROQ_MODEL ?? 'llama-3.3-70b-versatile',
+      groqVisionModel: env.GROQ_VISION_MODEL ?? 'llama-3.2-11b-vision-preview',
       openrouterModel: env.OPENROUTER_MODEL ?? 'anthropic/claude-3-haiku',
     },
     agent: {

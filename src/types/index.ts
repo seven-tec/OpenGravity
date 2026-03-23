@@ -38,9 +38,13 @@ export interface AgentState {
   iterations: number;
 }
 
+export type LLMMessageContent = 
+  | string 
+  | Array<{ type: 'text'; text: string } | { type: 'image_url'; image_url: { url: string } }>;
+
 export interface LLMMessage {
   role: 'system' | 'user' | 'assistant' | 'tool';
-  content: string;
+  content: LLMMessageContent;
   toolCalls?: ToolCall[];
   toolCallId?: string;
 }
@@ -54,5 +58,5 @@ export interface LLMResponse {
 export interface ProviderError {
   code: string;
   message: string;
-  provider: 'groq' | 'openrouter';
+  provider: 'groq' | 'openrouter' | 'laplas' | 'groq-vision';
 }

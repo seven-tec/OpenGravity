@@ -13,13 +13,14 @@ interface ToolDef {
 }
 
 export class GroqProvider implements LLMProvider {
-  name = 'groq' as const;
+  name: string;
   private client: Groq;
   private model: string;
 
-  constructor(apiKey: string, model: string) {
+  constructor(apiKey: string, model: string, name: string = 'groq') {
     this.client = new Groq({ apiKey });
     this.model = model;
+    this.name = name;
   }
 
   async generate(
@@ -27,17 +28,25 @@ export class GroqProvider implements LLMProvider {
     tools?: ToolDef[]
   ): Promise<LLMResponse> {
     const groqMessages: Groq.Chat.ChatCompletionMessageParam[] = messages.map(msg => {
+      let content = msg.content;
+      if (Array.isArray(content)) {
+        content = content
+          .filter(c => c.type === 'text')
+          .map(c => (c as any).text)
+          .join('\n');
+      }
+
       if (msg.role === 'tool') {
         return {
           role: 'tool' as const,
           tool_call_id: msg.toolCallId ?? '',
-          content: msg.content,
+          content: typeof content === 'string' ? content : JSON.stringify(content),
         };
       }
       if (msg.role === 'assistant' && msg.toolCalls && msg.toolCalls.length > 0) {
         return {
           role: 'assistant' as const,
-          content: msg.content || null,
+          content: (typeof content === 'string' ? content : null) as string | null,
           tool_calls: msg.toolCalls.map(tc => ({
             id: tc.id,
             type: 'function' as const,
@@ -48,9 +57,23 @@ export class GroqProvider implements LLMProvider {
           })),
         };
       }
+
+      // Para el rol user/system, Groq soporta ChatCompletionContentPart[] si es necesario (vision)
+      const groqContent: any = Array.isArray(content) 
+        ? content.map(part => {
+            if (part.type === 'image_url') {
+              return {
+                type: 'image_url',
+                image_url: { url: part.image_url.url }
+              };
+            }
+            return { type: 'text', text: part.text };
+          })
+        : content || '';
+
       return {
         role: msg.role as 'system' | 'user' | 'assistant',
-        content: msg.content || '',
+        content: groqContent,
       };
     });
 

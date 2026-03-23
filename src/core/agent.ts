@@ -1,5 +1,5 @@
 import type { Config } from '../config.js';
-import type { LLMMessage } from '../types/index.js';
+import type { LLMMessage, LLMMessageContent } from '../types/index.js';
 import { LLMOrchestrator } from './llm/index.js';
 import { DatabaseManager } from './database.js';
 import { ToolRegistry } from '../tools/registry.js';
@@ -50,10 +50,15 @@ export class Agent {
   async processWithImage(userId: string, userMessage: string, imageUrl: string): Promise<string> {
     console.log(`[Agent] Processing with image: ${imageUrl}`);
 
-    this.orchestrator.forceProvider('openrouter');
+    this.orchestrator.forceProvider('groq-vision');
 
     try {
-      const result = await this.process(userId, `[IMAGEN]: ${userMessage}\n\n[URL]: ${imageUrl}`);
+      const multiModalContent: LLMMessageContent = [
+        { type: 'text', text: userMessage },
+        { type: 'image_url', image_url: { url: imageUrl } }
+      ];
+
+      const result = await this.process(userId, multiModalContent);
       return result;
     } finally {
       this.orchestrator.clearForcedProvider();
@@ -68,7 +73,7 @@ export class Agent {
     }
   }
 
-  async process(userId: string, userMessage: string, isVoice = false): Promise<string> {
+  async process(userId: string, userMessage: LLMMessageContent, isVoice = false): Promise<string> {
     const maxIterations = this.config.agent.maxIterations;
     const maxContextMessages = this.config.agent.maxContextMessages;
     
@@ -150,14 +155,20 @@ export class Agent {
       });
     }
 
-    const currentMessage = isVoice ? `[MODO VOZ] ${userMessage}` : userMessage;
+    let currentMessage = userMessage;
+    let messageForDb = typeof userMessage === 'string' ? userMessage : '[IMAGEN] ' + userMessage.filter((c: any) => c.type === 'text').map((c: any) => c.text).join(' ');
+
+    if (isVoice && typeof currentMessage === 'string') {
+      currentMessage = `[MODO VOZ] ${userMessage}`;
+    }
+
     messages.push({ role: 'user', content: currentMessage });
-    this.db.addMessage(userId, 'user', userMessage);
-    this.firestore.addMessage(userId, 'user', userMessage).catch(() => {});
+    this.db.addMessage(userId, 'user', messageForDb);
+    this.firestore.addMessage(userId, 'user', messageForDb).catch(() => {});
 
     // Trace initialization for observability
     const traceId = `trace_${Date.now()}`;
-    this.emitEvent(userId, 'thought', `Iniciando procesamiento: "${userMessage}"`, traceId);
+    this.emitEvent(userId, 'thought', `Iniciando procesamiento: "${messageForDb}"`, traceId);
 
     const midContext: MiddlewareContext = {
       userId,
