@@ -60,12 +60,31 @@ export class Agent {
     const maxContextMessages = this.config.agent.maxContextMessages;
     
     // SYSTEM PROMPT: The core "personality" and rules of the agent
-    const promptPath = path.join(__dirname, '..', 'prompts', 'kernel.md');
+    const possiblePaths = [
+      path.join(__dirname, '..', 'prompts', 'kernel.md'),
+      path.join(process.cwd(), 'src', 'prompts', 'kernel.md'),
+      path.join(process.cwd(), 'dist', 'prompts', 'kernel.md'),
+      path.join(process.cwd(), 'prompts', 'kernel.md')
+    ];
+
     let systemBasePrompt = "";
-    try {
-      systemBasePrompt = fs.readFileSync(promptPath, 'utf-8');
-    } catch (e) {
-      console.warn('[Agent] Could not load system prompt from file, using fallback');
+    let loaded = false;
+
+    for (const p of possiblePaths) {
+      try {
+        if (fs.existsSync(p)) {
+          systemBasePrompt = fs.readFileSync(p, 'utf-8');
+          loaded = true;
+          console.log(`[Agent] System prompt loaded from: ${p}`);
+          break;
+        }
+      } catch (e) {
+        // Continue to next path
+      }
+    }
+
+    if (!loaded) {
+      console.warn('[Agent] Could not load system prompt from any path, using fallback');
       systemBasePrompt = 'Eres "OpenGravity", la Arquitecta de Software Senior.';
     }
 
