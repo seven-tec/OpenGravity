@@ -4,7 +4,7 @@ import { exec } from 'child_process';
 
 // Mock de child_process
 vi.mock('child_process', () => ({
-  exec: vi.fn((cmd, options, cb) => {
+  exec: vi.fn((_cmd, options, cb) => {
     const callback = typeof options === 'function' ? options : cb;
     if (typeof callback === 'function') {
       // Simulate successful execution
