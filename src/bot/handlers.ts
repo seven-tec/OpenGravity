@@ -87,6 +87,21 @@ _Todo operacional._`, { parse_mode: 'Markdown' });
           return;
         }
 
+        // Detectar imágenes en formato ![caption](url)
+        const imageRegex = /!\[.*?\]\((https?:\/\/.*?)\)/g;
+        const images = [...response.matchAll(imageRegex)];
+
+        if (images.length > 0) {
+          for (const match of images) {
+            const imageUrl = match[1];
+            try {
+              await ctx.replyWithPhoto(imageUrl);
+            } catch (err) {
+              console.error(`[Handler] Failed to send photo: ${imageUrl}`, err);
+            }
+          }
+        }
+
         await ctx.reply(response);
       } catch (error) {
         console.error('[Handler] Agent error:', error);
@@ -148,6 +163,22 @@ _Todo operacional._`, { parse_mode: 'Markdown' });
           }
         } else {
           if (!tts.isEnabled()) console.log('[Handler] TTS is disabled, sending text message');
+          
+          // Detectar imágenes en formato ![caption](url)
+          const imageRegex = /!\[.*?\]\((https?:\/\/.*?)\)/g;
+          const images = [...response.matchAll(imageRegex)];
+
+          if (images.length > 0) {
+            for (const match of images) {
+              const imageUrl = match[1];
+              try {
+                await ctx.replyWithPhoto(imageUrl);
+              } catch (err) {
+                console.error(`[Handler] Failed to send photo: ${imageUrl}`, err);
+              }
+            }
+          }
+
           await ctx.reply(response);
         }
 
