@@ -162,6 +162,7 @@ export class Agent {
       currentMessage = `[MODO VOZ] ${userMessage}`;
     }
 
+    console.log(`DEBUG_AGENT: currentMessage type=${typeof currentMessage} isArray=${Array.isArray(currentMessage)}`);
     messages.push({ role: 'user', content: currentMessage });
     this.db.addMessage(userId, 'user', messageForDb);
     this.firestore.addMessage(userId, 'user', messageForDb).catch(() => {});
@@ -193,9 +194,14 @@ export class Agent {
           if (mid.preExecute) await mid.preExecute(midContext);
         }
 
+        // Filter tools if forced provider is groq-vision to prevent redundant tool calls (like vision_analysis)
+        const effectiveTools = (this.orchestrator as any)._forcedProvider === 'groq-vision'
+          ? this.tools.getDefinitions().filter(t => t.name !== 'vision_analysis')
+          : undefined;
+
         const response = isLastIteration 
           ? await this.orchestrator.generateFinalResponse(messages)
-          : await this.orchestrator.generate(messages);
+          : await this.orchestrator.generate(messages, false, effectiveTools);
 
         // MIDDLEWARE: postGenerate
         for (const mid of this.middlewares) {
@@ -234,7 +240,7 @@ export class Agent {
           console.log(`[Agent] Executing ${toolCalls.length} tool(s)`);
           
           // Loop protection: Check if we are repeating the exact same tool calls
-          const currentToolHash = JSON.stringify(toolCalls.map(tc => ({ n: tc.name, a: tc.arguments })));
+          const currentToolHash = JSON.stringify(toolCalls.map((tc: any) => ({ n: tc.name, a: tc.arguments })));
           if (currentToolHash === lastToolHash) {
             console.log('[Agent] Loop detected! Forcing final response in next iteration.');
             iteration = maxIterations - 2; // Move to second to last iteration to force final response

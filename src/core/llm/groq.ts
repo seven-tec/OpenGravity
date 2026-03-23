@@ -28,13 +28,7 @@ export class GroqProvider implements LLMProvider {
     tools?: ToolDef[]
   ): Promise<LLMResponse> {
     const groqMessages: Groq.Chat.ChatCompletionMessageParam[] = messages.map(msg => {
-      let content = msg.content;
-      if (Array.isArray(content)) {
-        content = content
-          .filter(c => c.type === 'text')
-          .map(c => (c as any).text)
-          .join('\n');
-      }
+      const content = msg.content;
 
       if (msg.role === 'tool') {
         return {
@@ -92,7 +86,10 @@ export class GroqProvider implements LLMProvider {
 
     console.log(`[Groq] ${groqMessages.length} messages, tools: ${toolsPayload?.length ?? 0}`);
     groqMessages.forEach((m, i) => {
-      console.log(`[Groq] msg[${i}] role=${m.role} content="${String(m.content).substring(0, 80)}..."`);
+      const logContent = Array.isArray(m.content) 
+        ? `[MULTI-MODAL: ${m.content.length} parts]` 
+        : String(m.content).substring(0, 80);
+      console.log(`[Groq] msg[${i}] role=${m.role} content="${logContent}..."`);
     });
     if (toolsPayload) {
       console.log(`[Groq] Tools:`, JSON.stringify(toolsPayload.map(t => t.function.name)));

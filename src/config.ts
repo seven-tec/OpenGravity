@@ -10,7 +10,7 @@ export const ConfigSchema = z.object({
     openrouterApiKey: z.string().optional(),
     laplasApiKey: z.string().optional(),
     groqModel: z.string().default('llama-3.3-70b-versatile'),
-    groqVisionModel: z.string().default('llama-3.2-11b-vision-preview'),
+    groqVisionModel: z.string().default('meta-llama/llama-4-scout-17b-16e-instruct'),
     openrouterModel: z.string().default('anthropic/claude-3-haiku'),
   }),
   agent: z.object({
@@ -84,7 +84,7 @@ export function parseConfig(env: EnvSchema): Config {
       openrouterApiKey: env.OPENROUTER_API_KEY,
       laplasApiKey: env.LAPLAS_API_KEY,
       groqModel: env.GROQ_MODEL ?? 'llama-3.3-70b-versatile',
-      groqVisionModel: env.GROQ_VISION_MODEL ?? 'llama-3.2-11b-vision-preview',
+      groqVisionModel: env.GROQ_VISION_MODEL ?? 'meta-llama/llama-4-scout-17b-16e-instruct',
       openrouterModel: env.OPENROUTER_MODEL ?? 'anthropic/claude-3-haiku',
     },
     agent: {

@@ -62,15 +62,15 @@ export class LLMOrchestrator {
     this.tools = tools;
   }
 
-  async generate(messages: LLMMessage[], forceNoTools = false): Promise<LLMResponse> {
+  async generate(messages: LLMMessage[], forceNoTools = false, toolsOverride?: ToolDef[]): Promise<LLMResponse> {
     let lastError: ProviderError | null = null;
     
     for (let i = 0; i < this.providers.length; i++) {
       const provider = this.providers[this.currentProviderIndex];
-      const useTools = this.tools.length > 0 && !forceNoTools;
+      const useTools = (toolsOverride || this.tools).length > 0 && !forceNoTools;
       
       try {
-        const response = await provider.generate(messages, useTools ? this.tools : undefined);
+        const response = await provider.generate(messages, useTools ? (toolsOverride || this.tools) : undefined);
         return response;
       } catch (error) {
         lastError = error as ProviderError;
