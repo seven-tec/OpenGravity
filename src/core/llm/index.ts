@@ -18,6 +18,7 @@ export class LLMOrchestrator {
   private providers: LLMProvider[];
   private currentProviderIndex: number;
   private tools: ToolDef[];
+  private _forcedProvider: string | null = null;
 
   constructor(config: Config) {
     this.providers = [];
@@ -35,6 +36,20 @@ export class LLMOrchestrator {
     if (this.providers.length === 0) {
       throw new Error('No LLM providers configured. Provide at least GROQ_API_KEY.');
     }
+  }
+
+  forceProvider(providerName: string): void {
+    this._forcedProvider = providerName;
+    const index = this.providers.findIndex(p => p.name === providerName);
+    if (index !== -1) {
+      this.currentProviderIndex = index;
+      console.log(`[LLM] Forced provider: ${providerName}`);
+    }
+  }
+
+  clearForcedProvider(): void {
+    this._forcedProvider = null;
+    console.log('[LLM] Cleared forced provider, returning to normal rotation');
   }
 
   registerTools(tools: ToolDef[]): void {
@@ -57,6 +72,12 @@ export class LLMOrchestrator {
         if (provider.isRateLimited(lastError) || provider.isToolUseFailed(lastError)) {
           const reason = provider.isRateLimited(lastError) ? 'Rate limited' : 'Tool use failed';
           console.log(`[LLM] ${reason}, trying next provider...`);
+          
+          if (this._forcedProvider) {
+            console.log(`[LLM] Provider forced to ${this._forcedProvider}, not rotating`);
+            throw lastError;
+          }
+          
           this.currentProviderIndex = (this.currentProviderIndex + 1) % this.providers.length;
           
           if (this.currentProviderIndex === 0 && i === this.providers.length - 1) {

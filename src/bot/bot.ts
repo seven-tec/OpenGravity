@@ -26,7 +26,7 @@ export async function createBot(
 
   bot.use(createWhitelistMiddleware(config.telegram.allowedUserIds));
 
-  const handlers = createHandlers(agent, db, audio, tts);
+  const handlers = createHandlers(agent, db, audio, tts, config.telegram.botToken);
 
   bot.command('start', handlers.onStart);
   bot.command('help', handlers.onHelp);
@@ -37,6 +37,7 @@ export async function createBot(
 
   bot.on('message:text', handlers.onMessage);
   bot.on('message:voice', handlers.onVoice);
+  bot.on('message:photo', handlers.onPhoto);
 
   bot.catch((err) => {
     console.error('[Bot] Error:', err.error);

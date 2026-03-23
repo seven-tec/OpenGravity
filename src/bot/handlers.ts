@@ -5,7 +5,7 @@ import type { DatabaseManager } from '../core/database.js';
 import type { AudioService } from '../services/audio/audio_service.js';
 import type { TTSInterface } from '../services/audio/tts_interface.js';
 
-export function createHandlers(agent: Agent, db: DatabaseManager, audio: AudioService, tts: TTSInterface) {
+export function createHandlers(agent: Agent, db: DatabaseManager, audio: AudioService, tts: TTSInterface, botToken?: string) {
   return {
     async onStart(ctx: AppContext): Promise<void> {
       await ctx.reply(`🤖 *OpenGravity v1.0 Activado*
@@ -193,6 +193,46 @@ _Todo operacional._`, { parse_mode: 'Markdown' });
       } catch (error) {
         console.error('[Handler] Voice error:', error);
         await ctx.api.editMessageText(ctx.chat!.id, msg.message_id, '❌ Error procesando el audio.');
+      }
+    },
+
+    async onPhoto(ctx: AppContext): Promise<void> {
+      const photo = ctx.message?.photo;
+      if (!photo || photo.length === 0) {
+        await ctx.reply('No detecté ninguna imagen en tu mensaje.');
+        return;
+      }
+
+      const userId = ctx.from!.id.toString();
+      const photoId = photo[photo.length - 1].file_id;
+      const caption = ctx.message?.caption || '';
+
+      console.log(`[Handler] Photo received from ${userId}, caption: "${caption}"`);
+
+      const msg = await ctx.reply('🖼️ _Analizando imagen..._', { parse_mode: 'Markdown' });
+
+      try {
+        const file = await ctx.api.getFile(photoId);
+        const fileUrl = file.file_path;
+
+        if (!fileUrl) {
+          await ctx.api.editMessageText(ctx.chat!.id, msg.message_id, '❌ No pude acceder a la imagen.');
+          return;
+        }
+
+        const imageUrl = `https://api.telegram.org/file/${botToken}/${fileUrl}`;
+
+        const prompt = caption 
+          ? `${caption}\n\nAnalizá esta imagen y describí lo que ves.` 
+          : 'Describí esta imagen en detalle.';
+
+        const response = await agent.processWithImage(userId, prompt, imageUrl);
+
+        await ctx.api.editMessageText(ctx.chat!.id, msg.message_id, response);
+
+      } catch (error) {
+        console.error('[Handler] Photo error:', error);
+        await ctx.api.editMessageText(ctx.chat!.id, msg.message_id, '❌ Error al analizar la imagen. Intenta de nuevo.');
       }
     },
   };

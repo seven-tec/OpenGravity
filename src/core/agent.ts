@@ -47,6 +47,19 @@ export class Agent {
     return this.tools.names;
   }
 
+  async processWithImage(userId: string, userMessage: string, imageUrl: string): Promise<string> {
+    console.log(`[Agent] Processing with image: ${imageUrl}`);
+
+    this.orchestrator.forceProvider('openrouter');
+
+    try {
+      const result = await this.process(userId, `[IMAGEN]: ${userMessage}\n\n[URL]: ${imageUrl}`);
+      return result;
+    } finally {
+      this.orchestrator.clearForcedProvider();
+    }
+  }
+
   async clearHistory(userId: string): Promise<void> {
     this.db.clearOldMessages(userId, 0);
     // TypeScript resolverá esto si agregamos clearMessages a FirestoreService
