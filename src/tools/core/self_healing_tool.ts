@@ -45,10 +45,7 @@ export default class SelfHealingTool implements Tool {
     try {
       switch (action) {
         case 'analyze_failures':
-          // Usamos una cuenta hardcoded para Pablo por ahora o pasamos el userId si lo tuviéramos en deps
-          // Como ToolDependencies no suele tener userId, el agente debería proveerlo si fuera necesario,
-          // pero aquí usaremos el del contexto si estuviera, o el de Pablo por defecto.
-          const userId = '855084566'; 
+          const userId = this.deps.config.telegram.rootUserId || 'unknown'; 
           const failures = await (firestore as any).getErrorTraces(userId, limit);
           
           if (failures.length === 0) {

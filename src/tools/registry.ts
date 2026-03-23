@@ -2,6 +2,8 @@ import fs from 'fs';
 import path from 'path';
 import type { Tool, ToolConstructor, ToolDependencies } from './base.js';
 import { fileURLToPath, pathToFileURL } from 'url';
+import { withRetry } from '../utils/retry.js';
+
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -112,7 +114,25 @@ export class ToolRegistry {
         finalParams = validation.data;
       }
 
-      const result = await tool.execute(finalParams);
+      const result = await withRetry(async () => {
+        const r = await tool.execute(finalParams);
+        const parsed = tryParseJson(r);
+        // Si el resultado de la tool indica explícitamente un error de rate limit o red, disparamos el reintento
+        if (parsed && parsed.error && (
+            String(parsed.error).includes('429') || 
+            String(parsed.error).includes('rate limit') ||
+            String(parsed.error).includes('ECONNRESET') ||
+            String(parsed.error).includes('ETIMEDOUT')
+        )) {
+          throw new Error(String(parsed.error));
+        }
+        return r;
+      }, {
+        maxAttempts: 3,
+        initialDelayMs: 1500,
+        backoffFactor: 2
+      });
+
       const resultObj = tryParseJson(result);
       if (resultObj && resultObj.error) {
         return JSON.stringify({

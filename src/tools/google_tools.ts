@@ -310,7 +310,7 @@ export default class GoogleWorkspaceTool implements Tool {
           },
           query: {
             type: 'string' as const,
-            description: 'Texto de búsqueda para Gmail o Drive. NO uses flags como --query, solo el texto de búsqueda (ej: "from:roberto@gmail.com subject:reunión")'
+            description: 'Texto de búsqueda para Gmail o Drive. NO uses flags como --query. EJEMPLOS GMAIL: "category:primary" (Principal), "category:promotions" (Promociones), "from:pablo@gmail.com", "is:unread".'
           },
           to: {
             type: 'string' as const,

@@ -4,11 +4,12 @@ export const ConfigSchema = z.object({
   telegram: z.object({
     botToken: z.string().min(1, 'TELEGRAM_BOT_TOKEN is required'),
     allowedUserIds: z.array(z.string()).min(1, 'TELEGRAM_ALLOWED_USER_IDS is required'),
+    rootUserId: z.string().optional(),
+
   }),
   llm: z.object({
     groqApiKey: z.string().min(1, 'GROQ_API_KEY is required'),
     openrouterApiKey: z.string().optional(),
-    laplasApiKey: z.string().optional(),
     groqModel: z.string().default('llama-3.3-70b-versatile'),
     groqVisionModel: z.string().default('meta-llama/llama-4-scout-17b-16e-instruct'),
     openrouterModel: z.string().default('anthropic/claude-3-haiku'),
@@ -49,9 +50,10 @@ export type Config = z.infer<typeof ConfigSchema>;
 export interface EnvSchema {
   TELEGRAM_BOT_TOKEN?: string;
   TELEGRAM_ALLOWED_USER_IDS?: string;
+  ROOT_USER_ID?: string;
+
   GROQ_API_KEY?: string;
   OPENROUTER_API_KEY?: string;
-  LAPLAS_API_KEY?: string;
   GROQ_MODEL?: string;
   GROQ_VISION_MODEL?: string;
   OPENROUTER_MODEL?: string;
@@ -78,11 +80,11 @@ export function parseConfig(env: EnvSchema): Config {
     telegram: {
       botToken: env.TELEGRAM_BOT_TOKEN ?? '',
       allowedUserIds: telegramAllowedIds,
+      rootUserId: env.ROOT_USER_ID ?? telegramAllowedIds[0],
     },
     llm: {
       groqApiKey: env.GROQ_API_KEY ?? '',
       openrouterApiKey: env.OPENROUTER_API_KEY,
-      laplasApiKey: env.LAPLAS_API_KEY,
       groqModel: env.GROQ_MODEL ?? 'llama-3.3-70b-versatile',
       groqVisionModel: env.GROQ_VISION_MODEL ?? 'meta-llama/llama-4-scout-17b-16e-instruct',
       openrouterModel: env.OPENROUTER_MODEL ?? 'anthropic/claude-3-haiku',
