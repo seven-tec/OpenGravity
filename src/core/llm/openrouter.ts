@@ -88,10 +88,12 @@ export class OpenRouterProvider implements LLMProvider {
   }
 
   isRateLimited(error: ProviderError): boolean {
-    return error.code === '429' ||
+    return error.code === '402' ||
+           error.code === '429' ||
            error.message.includes('rate_limit') ||
            error.message.includes('quota exceeded') ||
-           error.message.includes('limit exceeded');
+           error.message.includes('limit exceeded') ||
+           error.message.includes('requires more credits');
   }
 
   isToolUseFailed(error: ProviderError): boolean {

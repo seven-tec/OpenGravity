@@ -24,12 +24,12 @@ export class LLMOrchestrator {
     this.currentProviderIndex = 0;
     this.tools = [];
 
-    if (config.llm.groqApiKey) {
-      this.providers.push(new GroqProvider(config.llm.groqApiKey, config.llm.groqModel));
-    }
-
     if (config.llm.openrouterApiKey) {
       this.providers.push(new OpenRouterProvider(config.llm.openrouterApiKey, config.llm.openrouterModel));
+    }
+
+    if (config.llm.groqApiKey) {
+      this.providers.push(new GroqProvider(config.llm.groqApiKey, config.llm.groqModel));
     }
 
     if (this.providers.length === 0) {
