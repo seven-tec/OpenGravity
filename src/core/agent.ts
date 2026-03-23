@@ -84,8 +84,8 @@ export class Agent {
     }
 
     if (!loaded) {
-      console.warn('[Agent] Could not load system prompt from any path, using fallback');
-      systemBasePrompt = 'Eres "OpenGravity", la Arquitecta de Software Senior.';
+      console.warn('[Agent] Could not load system prompt from any path, using configuration fallback');
+      systemBasePrompt = this.config.agent.systemPrompt;
     }
 
     // Inyectar Skin según el contexto (por ahora simplificado o detectado)

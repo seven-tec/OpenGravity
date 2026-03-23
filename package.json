@@ -6,7 +6,7 @@
   "main": "src/index.ts",
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "build": "tsc",
+    "build": "tsc && node -e \"const fs = require('fs'); if (!fs.existsSync('dist/prompts')) fs.mkdirSync('dist/prompts', { recursive: true }); fs.copyFileSync('src/prompts/kernel.md', 'dist/prompts/kernel.md');\"",
     "start": "node dist/index.js",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
