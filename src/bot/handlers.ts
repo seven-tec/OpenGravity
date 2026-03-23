@@ -220,13 +220,21 @@ _Todo operacional._`, { parse_mode: 'Markdown' });
           return;
         }
 
-        const imageUrl = `https://api.telegram.org/file/${botToken}/${fileUrl}`;
+        const imageUrl = `https://api.telegram.org/file/bot${botToken}/${fileUrl}`;
+
+        // Descargamos la imagen para enviarla como Base64 y evitar problemas de acceso/auth de Groq
+        console.log(`[Handler] Descargando imagen para conversión a Base64...`);
+        const imageResponse = await fetch(imageUrl);
+        if (!imageResponse.ok) throw new Error(`Error al descargar imagen de Telegram: ${imageResponse.status}`);
+        const arrayBuffer = await imageResponse.arrayBuffer();
+        const base64 = Buffer.from(arrayBuffer).toString('base64');
+        const dataUrl = `data:image/jpeg;base64,${base64}`;
 
         const prompt = caption 
           ? `${caption}\n\nAnalizá esta imagen y describí lo que ves.` 
           : 'Describí esta imagen en detalle.';
 
-        const response = await agent.processWithImage(userId, prompt, imageUrl);
+        const response = await agent.processWithImage(userId, prompt, dataUrl);
 
         await ctx.api.editMessageText(ctx.chat!.id, msg.message_id, response);
 
