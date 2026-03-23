@@ -9,6 +9,7 @@ export interface LLMProvider {
   ): Promise<LLMResponse>;
   
   isRateLimited(error: ProviderError): boolean;
+  isToolUseFailed(error: ProviderError): boolean;
 }
 
 export interface ToolDefinition {

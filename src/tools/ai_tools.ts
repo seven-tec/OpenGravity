@@ -3,7 +3,7 @@ import type { Tool, ToolDependencies } from './base.js';
 
 export class ImageGenerationTool implements Tool {
   name = 'image_generation';
-  description = 'Herramienta EXCLUSIVA para generar o dibujar imágenes. Tú eres texto, esta tool dibuja por ti. Al devolverte la URL, muéstrala exactamente así: [🖼️ Ver Imagen](url).';
+  description = 'Herramienta para generar o dibujar imágenes de alta calidad (Flux.1). Úsala cuando necesites crear contenido visual, logos o diagramas. Al devolverte la URL, muéstrala siempre usando el formato markdown: ![descripción](url).';
   
   schema = z.object({
     prompt: z.string().min(10, "El prompt debe ser descriptivo (mínimo 10 caracteres)").describe('Descripción detallada en inglés de la imagen a generar'),

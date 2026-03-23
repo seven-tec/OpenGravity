@@ -54,12 +54,13 @@ export class LLMOrchestrator {
       } catch (error) {
         lastError = error as ProviderError;
         
-        if (provider.isRateLimited(lastError)) {
-          console.log(`[LLM] Rate limited, trying next provider...`);
+        if (provider.isRateLimited(lastError) || provider.isToolUseFailed(lastError)) {
+          const reason = provider.isRateLimited(lastError) ? 'Rate limited' : 'Tool use failed';
+          console.log(`[LLM] ${reason}, trying next provider...`);
           this.currentProviderIndex = (this.currentProviderIndex + 1) % this.providers.length;
           
           if (this.currentProviderIndex === 0 && i === this.providers.length - 1) {
-            throw new Error('All LLM providers are rate limited.');
+            throw new Error(`All LLM providers failed (including ${reason}).`);
           }
           continue;
         }

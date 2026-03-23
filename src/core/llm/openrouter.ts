@@ -93,4 +93,10 @@ export class OpenRouterProvider implements LLMProvider {
            error.message.includes('quota exceeded') ||
            error.message.includes('limit exceeded');
   }
+
+  isToolUseFailed(error: ProviderError): boolean {
+    // OpenRouter doesn't have a specific tool_use_failed code like Groq, 
+    // but 400 is often used for malformed tool calls.
+    return error.code === '400';
+  }
 }
