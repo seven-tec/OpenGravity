@@ -24,6 +24,7 @@ interface CalendarCreateParams {
 
 interface CalendarUpdateParams {
   eventId: string;
+  calendarId?: string;
   summary?: string;
   startTime?: string;
   endTime?: string;
@@ -84,7 +85,7 @@ interface DocsExportParams {
 
 export default class GoogleWorkspaceTool implements Tool {
   name = 'google_workspace';
-  description = `Gestión de calendario, email y archivos de Google Workspace.`;
+  description = `Gestión de calendario, email y archivos de Google Workspace. Usa gogcli internamente.`;
 
   schema = z.object({
     action: z.enum([
@@ -125,11 +126,8 @@ export default class GoogleWorkspaceTool implements Tool {
 
   private buildCalendarEventsCommand(params: CalendarEventsParams): string {
     const parts = ['gog', 'calendar', 'events'];
-    if (params.calendarId) {
-      parts.push(this.escapeShellValue(params.calendarId));
-    } else {
-      parts.push('primary');
-    }
+    parts.push(this.escapeShellValue(params.calendarId || 'primary'));
+    
     if (params.startDate) parts.push(`--from=${this.escapeShellValue(params.startDate)}`);
     if (params.endDate) parts.push(`--to=${this.escapeShellValue(params.endDate)}`);
     if (params.maxResults) parts.push(`--max=${params.maxResults}`);
@@ -139,9 +137,11 @@ export default class GoogleWorkspaceTool implements Tool {
   private buildCalendarCreateCommand(params: CalendarCreateParams): string {
     const parts = ['gog', 'calendar', 'create'];
     parts.push(this.escapeShellValue(params.calendarId || 'primary'));
+    
     parts.push(`--summary=${this.escapeShellValue(params.summary)}`);
     parts.push(`--from=${this.escapeShellValue(params.startTime)}`);
     parts.push(`--to=${this.escapeShellValue(params.endTime)}`);
+    
     if (params.description) parts.push(`--description=${this.escapeShellValue(params.description)}`);
     if (params.location) parts.push(`--location=${this.escapeShellValue(params.location)}`);
     if (params.attendees?.length) {
@@ -152,8 +152,9 @@ export default class GoogleWorkspaceTool implements Tool {
 
   private buildCalendarUpdateCommand(params: CalendarUpdateParams): string {
     const parts = ['gog', 'calendar', 'update'];
-    parts.push('primary'); // Default calendarId
+    parts.push(this.escapeShellValue(params.calendarId || 'primary'));
     parts.push(this.escapeShellValue(params.eventId));
+    
     if (params.summary) parts.push(`--summary=${this.escapeShellValue(params.summary)}`);
     if (params.startTime) parts.push(`--from=${this.escapeShellValue(params.startTime)}`);
     if (params.endTime) parts.push(`--to=${this.escapeShellValue(params.endTime)}`);
@@ -200,11 +201,8 @@ export default class GoogleWorkspaceTool implements Tool {
   private buildSheetsGetCommand(params: SheetsGetParams): string {
     const parts = ['gog', 'sheets', 'get'];
     parts.push(this.escapeShellValue(params.spreadsheetId));
-    if (params.range) {
-      parts.push(this.escapeShellValue(params.range));
-    } else {
-      parts.push('A1:Z100'); // Default range if not provided, gog requires it
-    }
+    parts.push(this.escapeShellValue(params.range || 'A1:Z100'));
+    parts.push('--json');
     return parts.join(' ');
   }
 

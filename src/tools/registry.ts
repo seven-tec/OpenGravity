@@ -27,7 +27,8 @@ export class ToolRegistry {
       const files = fs.readdirSync(dir).filter(f => {
         const isCodeFile = (f.endsWith('.ts') || f.endsWith('.js')) && !f.endsWith('.d.ts') && !f.endsWith('.js.map');
         const isNotInternal = !f.includes('base') && !f.includes('registry') && !f.includes('system_tools');
-        return isCodeFile && isNotInternal;
+        const isNotTest = !f.includes('.test.') && !f.includes('.spec.');
+        return isCodeFile && isNotInternal && isNotTest;
       });
 
       for (const file of files) {
