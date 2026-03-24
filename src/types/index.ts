@@ -3,6 +3,7 @@ export interface Message {
   userId: string;
   role: 'user' | 'assistant' | 'system';
   content: string;
+  format?: string;
   toolCalls: string | null;
   createdAt: Date;
 }

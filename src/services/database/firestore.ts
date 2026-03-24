@@ -50,7 +50,7 @@ export class FirestoreService {
     }
   }
 
-  async addMessage(userId: string, role: string, content: string, toolCalls?: string): Promise<void> {
+  async addMessage(userId: string, role: string, content: string, toolCalls?: string, format: string = 'text'): Promise<void> {
     if (!this.isInitialized || !this.db) return;
 
     try {
@@ -58,6 +58,7 @@ export class FirestoreService {
       await docRef.set({
         role,
         content,
+        format,
         toolCalls: toolCalls || null,
         createdAt: admin.firestore.FieldValue.serverTimestamp(),
       });

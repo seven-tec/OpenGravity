@@ -28,6 +28,7 @@ export class DatabaseManager {
         user_id TEXT NOT NULL,
         role TEXT NOT NULL CHECK(role IN ('user', 'assistant', 'system')),
         content TEXT NOT NULL,
+        format TEXT DEFAULT 'text',
         tool_calls TEXT,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
       );
@@ -54,18 +55,18 @@ export class DatabaseManager {
     console.log('📦 [Database] Schema and directory verified');
   }
 
-  addMessage(userId: string, role: Message['role'], content: string, toolCalls?: string): number {
+  addMessage(userId: string, role: Message['role'], content: string, toolCalls?: string, format: string = 'text'): number {
     const stmt = this.db.prepare(`
-      INSERT INTO messages (user_id, role, content, tool_calls)
-      VALUES (?, ?, ?, ?)
+      INSERT INTO messages (user_id, role, content, tool_calls, format)
+      VALUES (?, ?, ?, ?, ?)
     `);
-    const result = stmt.run(userId, role, content, toolCalls ?? null);
+    const result = stmt.run(userId, role, content, toolCalls ?? null, format);
     return result.lastInsertRowid as number;
   }
 
   getRecentMessages(userId: string, limit: number): Message[] {
     const stmt = this.db.prepare(`
-      SELECT id, user_id as userId, role, content, tool_calls as toolCalls, 
+      SELECT id, user_id as userId, role, content, format, tool_calls as toolCalls, 
              created_at as createdAt
       FROM messages
       WHERE user_id = ?
@@ -77,7 +78,7 @@ export class DatabaseManager {
 
   searchMessages(query: string, limit: number, userId?: string): Message[] {
     const stmt = this.db.prepare(`
-      SELECT id, user_id as userId, role, content, tool_calls as toolCalls, 
+      SELECT id, user_id as userId, role, content, format, tool_calls as toolCalls, 
              created_at as createdAt
       FROM messages
       WHERE (? = '' OR content LIKE ?)

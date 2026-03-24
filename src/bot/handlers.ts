@@ -80,7 +80,7 @@ _Todo operacional._`, { parse_mode: 'Markdown' });
       console.log(`[Handler] Message from ${userId}: ${text.substring(0, 50)}...`);
 
       try {
-        const response = await agent.process(userId, text);
+        const response = await agent.process(userId, text, false, 'text');
         
         if (!response.trim()) {
           await ctx.reply('⚠️ El agente no devolvió una respuesta válida.');
@@ -137,7 +137,7 @@ _Todo operacional._`, { parse_mode: 'Markdown' });
         
         // Process with agent
         const userId = ctx.from!.id.toString();
-        const response = await agent.process(userId, result.text, true);
+        const response = await agent.process(userId, result.text, true, 'voice');
         
         // Output Voice response if TTS is enabled
         if (tts.isEnabled() && response.length < 2000) {

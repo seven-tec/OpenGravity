@@ -73,7 +73,7 @@ export class Agent {
     }
   }
 
-  async process(userId: string, userMessage: LLMMessageContent, isVoice = false): Promise<string> {
+  async process(userId: string, userMessage: LLMMessageContent, isVoice = false, format: string = 'text'): Promise<string> {
     const maxIterations = this.config.agent.maxIterations;
     const maxContextMessages = this.config.agent.maxContextMessages;
     
@@ -149,9 +149,15 @@ export class Agent {
     ];
 
     for (const msg of reversedMessages) {
+      let content = msg.content;
+      // Inyectar pista de formato para el LLM
+      if (msg.format === 'voice') {
+        content = `[MENSAJE ENVIADO COMO VOZ] ${content}`;
+      }
+      
       messages.push({
         role: msg.role,
-        content: msg.content,
+        content: content,
       });
     }
 
@@ -164,8 +170,8 @@ export class Agent {
 
     console.log(`DEBUG_AGENT: currentMessage type=${typeof currentMessage} isArray=${Array.isArray(currentMessage)}`);
     messages.push({ role: 'user', content: currentMessage });
-    this.db.addMessage(userId, 'user', messageForDb);
-    this.firestore.addMessage(userId, 'user', messageForDb).catch(() => {});
+    this.db.addMessage(userId, 'user', messageForDb, undefined, isVoice ? 'voice' : 'text');
+    this.firestore.addMessage(userId, 'user', messageForDb, undefined, isVoice ? 'voice' : 'text').catch(() => {});
 
     // Trace initialization for observability
     const traceId = `trace_${Date.now()}`;
@@ -298,8 +304,8 @@ export class Agent {
 
             console.log('[Agent] Stopping loop due to final tool error');
             const errorResponse = `Error: ${errorMessage}`;
-            this.db.addMessage(userId, 'assistant', errorResponse);
-            this.firestore.addMessage(userId, 'assistant', errorResponse).catch(() => {});
+            this.db.addMessage(userId, 'assistant', errorResponse, undefined, format);
+            this.firestore.addMessage(userId, 'assistant', errorResponse, undefined, format).catch(() => {});
             return errorResponse;
           }
 
@@ -310,8 +316,8 @@ export class Agent {
         if (content && content !== 'undefined' && content !== 'null') {
           console.log('[Agent] Got valid content');
           this.emitEvent(userId, 'answer', content, traceId);
-          this.db.addMessage(userId, 'assistant', content);
-          this.firestore.addMessage(userId, 'assistant', content).catch(() => {});
+          this.db.addMessage(userId, 'assistant', content, undefined, format);
+          this.firestore.addMessage(userId, 'assistant', content, undefined, format).catch(() => {});
           return content;
         }
 
@@ -331,8 +337,8 @@ export class Agent {
     }
 
     const defaultResponse = 'Che, me re tildé buscando eso y no encontré un pomo. ¿En qué otra cosa te puedo dar una mano?';
-    this.db.addMessage(userId, 'assistant', defaultResponse);
-    this.firestore.addMessage(userId, 'assistant', defaultResponse).catch(() => {});
+    this.db.addMessage(userId, 'assistant', defaultResponse, undefined, format);
+    this.firestore.addMessage(userId, 'assistant', defaultResponse, undefined, format).catch(() => {});
     return defaultResponse;
   }
 }
